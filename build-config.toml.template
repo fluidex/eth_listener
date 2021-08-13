@@ -1,0 +1,2 @@
+out_name = "events.rs"
+contract_file = "${CONTRACT_FILE}"

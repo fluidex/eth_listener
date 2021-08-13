@@ -1,0 +1,22 @@
+[package]
+name = "eth_listener"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+
+[dependencies]
+anyhow = "1.0"
+ethers = "0.2.2"
+thiserror = "1.0"
+tokio = { version = "1.9", features = ["full"] }
+
+[build-dependencies]
+anyhow = "1.0"
+ethers = "0.2.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.5"
+syn = "1.0.74"
+quote = "1.0.9"
+convert_case = "0.4.0"
