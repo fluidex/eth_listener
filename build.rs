@@ -1,11 +1,13 @@
-use convert_case::{Case, Casing};
-use ethers::abi::{Contract, ParamType};
-
-use serde::Deserialize;
-use std::io::Write;
 use std::{fs, env};
 use std::path::Path;
-use ethers::core::types::H256;
+
+use convert_case::{Case, Casing};
+use ethers::abi::{Contract, ParamType};
+use serde::{Serialize, Deserialize};
+use serde_json::Value;
+use tera::{Tera, Context};
+use std::collections::HashMap;
+use std::io::Write;
 
 #[derive(Debug, Deserialize)]
 struct BuildConfig {
@@ -14,13 +16,16 @@ struct BuildConfig {
 }
 
 fn main() -> anyhow::Result<()> {
+    println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=templates/*");
     let config: BuildConfig = toml::from_str(include_str!("build-config.toml"))?;
+    println!("cargo:rerun-if-changed={}", config.contract_file);
 
     let out_dir = env::var("OUT_DIR").unwrap();
     let dest_path = Path::new(&out_dir).join(&config.out_name);
 
     let contract_file = fs::read_to_string(&config.contract_file)?;
-    let parsed_contract: serde_json::Value = serde_json::from_str(contract_file.as_str())?;
+    let parsed_contract: Value = serde_json::from_str(contract_file.as_str())?;
     let abi_string = serde_json::to_vec(
         parsed_contract
             .get("abi")
@@ -28,118 +33,154 @@ fn main() -> anyhow::Result<()> {
     )?;
     let contract = Contract::load(abi_string.as_slice())?;
 
+    let events: Vec<Event> = contract
+        .events()
+        .map(|event| {
+            Event {
+                name: event.name.to_owned(),
+                signature: format!("{:?}", event.signature().as_fixed_bytes()),
+                inputs: event.inputs
+                    .iter()
+                    .map(|input| Input {
+                        name: input.name.to_owned(),
+                        kind: Type::from(&input.kind)
+                    })
+                    .collect()
+            }
+        })
+        .collect();
+
     let mut out_file = fs::File::create(&dest_path)?;
 
-    writeln!(out_file, "#![allow(dead_code)]")?;
-    writeln!(out_file, "use std::convert::TryInto;")?;
+    let mut tera = Tera::default();
+    tera.add_template_file("templates/events.rs", Some("events.rs"))?;
 
-    writeln!(out_file, r#"
-#[derive(::thiserror::Error, Debug)]
-pub enum EventParseError {{
-    #[error("event topic mismatch")]
-    TopicMismatch,
-    #[error(transparent)]
-    DecodeError(#[from] ::ethers::abi::Error),
-}}
-"#)?;
+    tera.register_filter("upper_snake", upper_snake);
+    tera.register_filter("lower_snake", lower_snake);
+    tera.register_filter("upper_camel", upper_camel);
+    tera.register_filter("normalize_type", normalize_type);
+    tera.register_filter("normalized_param_type", normalized_param_type);
+    tera.register_filter("normalized_parse", normalized_parse);
 
-    for event in contract.events() {
-        writeln!(out_file, "static {}_SIGNATURE: [u8; 32] = {:?};",
-                 &event.name.to_case(Case::UpperSnake),
-                 event.signature().as_fixed_bytes(),
-        )?;
-    }
-    writeln!(out_file)?;
-
-    writeln!(out_file, "#[derive(Debug, Clone)]")?;
-    writeln!(out_file, "pub enum Events {{")?;
-    for event in contract.events() {
-        writeln!(out_file, "    {0}({0}),", &event.name)?;
-    }
-    writeln!(out_file, "}}")?;
-    writeln!(out_file)?;
-
-    for event in contract.events() {
-        writeln!(out_file, "#[derive(Debug, Clone)]")?;
-        writeln!(out_file, "pub struct {} {{", &event.name)?;
-        for input in event.inputs.iter() {
-            let normalized_name = input.name.to_case(Case::Snake);
-            let normalized_type = match &input.kind {
-                ParamType::Bytes => "Vec<u8>".to_string(),
-                ParamType::Uint(size) => if *size <= 128usize {
-                    format!("u{}", size)
-                } else {
-                    format!("::ethers::types::U{}", size)
-                },
-                ParamType::FixedBytes(size) => format!("[u8; {}]", size),
-                _ => format!("::ethers::types::{}",
-                             input.kind.to_string().to_case(Case::UpperCamel))
-            };
-            writeln!(out_file, "    {}: {},", normalized_name, normalized_type)?;
-        }
-        writeln!(out_file, "}}")?;
-        writeln!(out_file)?;
-    }
-
-    writeln!(out_file, r#"impl Events {{
-    pub fn signature(&self) -> ::ethers::abi::Hash {{
-        use Events::*;
-        match self {{"#)?;
-    for event in contract.events() {
-        writeln!(out_file, "            {}(_) => ::ethers::abi::Hash::from({}_SIGNATURE),",
-                 &event.name,
-                 &event.name.to_case(Case::UpperSnake))?;
-    }
-    writeln!(out_file, r#"        }}
-    }}
-}}
-"#)?;
-
-    for event in contract.events() {
-        writeln!(out_file, r#"
-impl {0} {{
-    pub fn signature() -> ::ethers::abi::Hash {{
-        ::ethers::abi::Hash::from({1}_SIGNATURE)
-    }}
-}}
-
-impl ::std::convert::TryFrom<::ethers::types::Log> for {0} {{
-    type Error = EventParseError;
-
-    fn try_from(log: ::ethers::types::Log) -> Result<Self, Self::Error> {{
-        if !log.topics.iter().any(|t| *t == Self::signature()) {{
-            return Err(EventParseError::TopicMismatch)
-        }}
-        let mut decoded = ::ethers::abi::decode(&["#,
-                 &event.name,
-                 &event.name.to_case(Case::UpperSnake)
-        )?;
-        for input in event.inputs.iter() {
-            writeln!(out_file, "            ::ethers::abi::ParamType::{:?},", input.kind)?;
-        }
-        writeln!(out_file, "        ], log.data.as_ref())?;")?;
-        writeln!(out_file, "        Ok(Self {{")?;
-        for input in event.inputs.iter() {
-            let normalized_name = input.name.to_case(Case::Snake);
-            write!(out_file, "            {}: decoded.remove(0)", normalized_name)?;
-            let remaining = match input.kind {
-                ParamType::Uint(size) => if size <= 64usize {
-                    format!(".into_uint().unwrap().as_u64() as u{}", size)
-                } else if size <= 128usize {
-                    format!(".into_uint().unwrap().as_u128() as u{}", size)
-                } else {
-                    format!(".into_uint().unwrap()")
-                },
-                ParamType::FixedBytes(_) => format!(".into_fixed_bytes().unwrap().try_into().unwrap()"),
-                _ => format!(".into_{}().unwrap()",
-                             input.kind.to_string().to_case(Case::Snake))
-            };
-            writeln!(out_file, "{},", remaining)?;
-        }
-        writeln!(out_file, "        }})")?;
-        writeln!(out_file, "    }}")?;
-        writeln!(out_file, "}}")?;
-    }
+    let mut ctx = Context::new();
+    ctx.insert("events", &events);
+    tera.render_to("events.rs", &ctx, &mut out_file)?;
+    out_file.flush()?;
 
     Ok(())
+}
+
+fn upper_snake(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
+    Ok(Value::String(value.as_str().unwrap().to_case(Case::UpperSnake)))
+}
+fn lower_snake(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
+    Ok(Value::String(value.as_str().unwrap().to_case(Case::Snake)))
+}
+fn upper_camel(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
+    Ok(Value::String(value.as_str().unwrap().to_case(Case::UpperCamel)))
+}
+fn normalize_type(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
+    let literal = match Type::deserialize(value)? {
+        Type::Address => "::ethers::types::Address".to_string(),
+        Type::Bytes => "Vec<u8>".to_string(),
+        Type::Int(size) => if size <= 128 {
+            format!("i{}", size)
+        } else {
+            "::ethers::types::I256".to_string()
+        }
+        Type::Uint(size) => if size <= 128 {
+            format!("u{}", size)
+        } else {
+            "::ethers::types::U256".to_string()
+        }
+        Type::Bool => "bool".to_string(),
+        Type::String => "String".to_string(),
+        Type::FixedBytes(size) => format!("[u8; {}]", size)
+    };
+    Ok(Value::String(literal))
+}
+fn normalized_param_type(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
+    let literal = match Type::deserialize(value)? {
+        Type::Address => "::ethers::abi::ParamType::Address".to_string(),
+        Type::Bytes => "::ethers::abi::ParamType::Bytes".to_string(),
+        Type::Int(size) => format!("::ethers::abi::ParamType::Int({})", size),
+        Type::Uint(size) => format!("::ethers::abi::ParamType::Uint({})", size),
+        Type::Bool => "::ethers::abi::ParamType::Bool".to_string(),
+        Type::String => "::ethers::abi::ParamType::String".to_string(),
+        Type::FixedBytes(size) => format!("::ethers::abi::ParamType::FixedBytes({})", size),
+    };
+    Ok(Value::String(literal))
+}
+fn normalized_parse(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
+    let literal = match Type::deserialize(value)? {
+        Type::Address => ".into_address().unwrap()".to_string(),
+        Type::Bytes => ".into_bytes().unwrap()".to_string(),
+        Type::Int(size) => if size <= 64 {
+            format!(".into_int().unwrap().as_u64() as u{}", size)
+        } else if size <= 128 {
+            ".into_int().unwrap().as_u128()".to_string()
+        } else {
+            ".into_int().unwrap()".to_string()
+        }
+        Type::Uint(size) => if size <= 64 {
+            format!(".into_uint().unwrap().as_u64() as u{}", size)
+        } else if size <= 128 {
+            ".into_uint().unwrap().as_u128()".to_string()
+        } else {
+            ".into_uint().unwrap()".to_string()
+        }
+        Type::Bool => ".into_bool().unwrap()".to_string(),
+        Type::String => ".into_string().unwrap()".to_string(),
+        Type::FixedBytes(_) => ".into_fixed_bytes().unwrap().try_into().unwrap()".to_string(),
+    };
+    Ok(Value::String(literal))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Event {
+    pub name: String,
+    pub signature: String,
+    pub inputs: Vec<Input>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Input {
+    pub name: String,
+    pub kind: Type,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+enum Type {
+    /// Address.
+    Address,
+    /// Bytes.
+    Bytes,
+    /// Signed integer.
+    Int(usize),
+    /// Unsigned integer.
+    Uint(usize),
+    /// Boolean.
+    Bool,
+    /// String.
+    String,
+    /// Vector of bytes with fixed size.
+    FixedBytes(usize),
+}
+
+impl From<&ParamType> for Type {
+    fn from(t: &ParamType) -> Self {
+        use Type::*;
+        match t {
+            ParamType::Address => Address,
+            ParamType::Bytes => Bytes,
+            ParamType::Int(size) => Int(*size),
+            ParamType::Uint(size) => Uint(*size),
+            ParamType::Bool => Bool,
+            ParamType::String => String,
+            ParamType::Array(_) => unimplemented!("dynamic recursive type not supported"),
+            ParamType::FixedBytes(size) => FixedBytes(*size),
+            ParamType::FixedArray(_, _) => unimplemented!("dynamic recursive type not supported"),
+            ParamType::Tuple(_) => unimplemented!("dynamic recursive type not supported"),
+        }
+    }
 }
