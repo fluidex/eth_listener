@@ -431,6 +431,7 @@ dependencies = [
  "anyhow",
  "convert_case",
  "ethers",
+ "once_cell",
  "serde",
  "serde_json",
  "tera",

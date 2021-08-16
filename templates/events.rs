@@ -1,4 +1,5 @@
 #[allow(dead_code)]
+use std::convert::TryInto;
 
 #[derive(::thiserror::Error, Debug)]
 pub enum EventParseError {
@@ -9,21 +10,21 @@ pub enum EventParseError {
 }
 
 {% for event in events %}
-static {{ event.name | upper_snake }}_SIGNATURE: [u8; 32] = {{ event.signature }};
-{% endfor %}
+const {{ event.name | upper_snake }}_SIGNATURE: ::ethers::abi::Hash =
+    ::ethers::types::H256(
+        {{ event.signature }}
+    );{% endfor %}
 
 #[derive(Debug, Clone, ::serde::Serialize, ::serde::Deserialize)]
 pub enum Events {
-    {% for event in events %}
-    {{ event.name | upper_camel }}({{ event.name | upper_camel }}),
+    {% for event in events %}{{ event.name | upper_camel }}({{ event.name | upper_camel }}),
     {% endfor %}
 }
 
 {% for event in events %}
 #[derive(Debug, Clone, ::serde::Serialize, ::serde::Deserialize)]
 pub struct {{ event.name | upper_camel }} {
-    {% for input in event.inputs %}
-    {{ input.name | lower_snake }}: {{ input.kind | normalize_type }},
+    {% for input in event.inputs %}{{ input.name | lower_snake }}: {{ input.kind | normalize_type }},
     {% endfor %}
 }
 {% endfor %}
@@ -32,9 +33,21 @@ impl Events {
     pub fn signature(&self) -> ::ethers::abi::Hash {
         use Events::*;
         match self {
-            {% for event in events %}
-            {{ event.name | upper_camel }}(_) => ::ethers::abi::Hash::from({{ event.name | upper_snake }}_SIGNATURE),
+            {% for event in events %}{{ event.name | upper_camel }}(_) => {{ event.name | upper_snake }}_SIGNATURE,
             {% endfor %}
+        }
+    }
+}
+
+impl ::std::convert::TryFrom<::ethers::types::Log> for Events {
+    type Error = EventParseError;
+
+    fn try_from(log: ::ethers::types::Log) -> Result<Self, Self::Error> {
+        use Events::*;
+        let signature = log.topics[0];
+        match log.topics[0] {
+            {% for event in events %}_ if { signature == {{ event.name | upper_snake }}_SIGNATURE } => Ok({{ event.name | upper_camel }}(log.try_into()?)),
+            {% endfor %}_ => Err(EventParseError::TopicMismatch)
         }
     }
 }
@@ -42,7 +55,7 @@ impl Events {
 {% for event in events %}
 impl {{ event.name | upper_camel }} {
     pub fn signature() -> ::ethers::abi::Hash {
-        ::ethers::abi::Hash::from({{ event.name | upper_snake }}_SIGNATURE)
+        {{ event.name | upper_snake }}_SIGNATURE
     }
 }
 

@@ -19,7 +19,7 @@ fn main() -> anyhow::Result<()> {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=templates/*");
     let config: BuildConfig = toml::from_str(include_str!("build-config.toml"))?;
-    println!("cargo:rerun-if-changed={}", config.contract_file);
+    println!("cargo:rerun-if-changed=build-config.toml");
 
     let out_dir = env::var("OUT_DIR").unwrap();
     let dest_path = Path::new(&out_dir).join(&config.out_name);
