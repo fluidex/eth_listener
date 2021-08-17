@@ -19,6 +19,14 @@ async fn main() -> Result<()> {
 
     println!("start listening on eth net");
 
+    // let mut block_stream = provider.subscribe_blocks().await?;
+    // while let Some(block) = block_stream.next().await {
+    //     let block_number = block.number.unwrap();
+    //     let confirmed_block = provider.get_block(block_number - N).await?.unwrap();
+    //
+    //     tx.send(confirmed_block).await?;
+    // }
+
     while let Some(event) = log_stream.next().await {
         let height = event.block_number.unwrap().as_u64();
         match Events::try_from(event) {
