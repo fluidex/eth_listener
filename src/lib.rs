@@ -10,13 +10,13 @@ pub mod events {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ConfirmedBlockSubscribeError {
-    #[error(transparent)]
+    #[error("provider got error when subscribe blocks: {0}")]
     Provider(#[from] ProviderError),
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum ConfirmedBlockStreamError {
-    #[error(transparent)]
+    #[error("provider got error when get blocks: {0}")]
     Provider(#[from] ProviderError),
 }
 
