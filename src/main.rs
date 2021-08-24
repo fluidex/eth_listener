@@ -1,41 +1,31 @@
+#[macro_use]
+extern crate log;
+
 use std::convert::TryFrom;
 
 use anyhow::Result;
 use ethers::prelude::*;
 use eth_listener::events::*;
+use eth_listener::{ConfirmedBlockStream, ConfirmedBlockStreamError};
 
-const WEB3_URL: &str = "ws://localhost:8545";
+const WEB3_URL: &str = "wss://mainnet.infura.io/ws/v3/591481dbcf78432fa0786256ff0ef929";
 const CONTRACT_ADDRESS: &str = "0x9324F27714f4461E3c146810fe1Be202bDB0d4e5";
 
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    pretty_env_logger::init();
 
     let provider = Provider::connect(WEB3_URL).await?;
-    let filter = Filter::default()
-        .address(CONTRACT_ADDRESS.parse::<H160>().unwrap());
 
-    let mut log_stream = provider.subscribe_logs(&filter).await?;
+    info!("start listening on eth net");
 
-    println!("start listening on eth net");
+    let mut confirmed_stream = ConfirmedBlockStream::new(&provider, provider.get_block_number().await?.as_u64(), 3).await?;
 
-    // let mut block_stream = provider.subscribe_blocks().await?;
-    // while let Some(block) = block_stream.next().await {
-    //     let block_number = block.number.unwrap();
-    //     let confirmed_block = provider.get_block(block_number - N).await?.unwrap();
-    //
-    //     tx.send(confirmed_block).await?;
-    // }
-
-    while let Some(event) = log_stream.next().await {
-        let height = event.block_number.unwrap().as_u64();
-        match Events::try_from(event) {
-            Ok(event) => match event {
-                Events::RegisterUser(register_user) => println!("{} {:?}", height, register_user),
-                Events::NewToken(new_token) => println!("{} {:?}", height, new_token),
-                Events::Deposit(deposit) => println!("{} {:?}", height, deposit),
-            }
-            Err(e) => println!("{:?}", e)
+    while let Some(block) = confirmed_stream.next().await {
+        match block {
+            Ok(block) => info!("current: {}, confirmed: {} {:?}", provider.get_block_number().await?.as_u64(), block.number.unwrap(), block.hash.unwrap()),
+            Err(e) => error!("error: {:?}", e)
         }
     }
 

@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate log;
+
 use ethers::prelude::*;
 use futures::Stream;
 use std::pin::Pin;
@@ -37,7 +40,9 @@ impl <'a, P: PubsubClient> ConfirmedBlockStream<'a, P> {
         n_confirmations: u64,
     ) -> Result<ConfirmedBlockStream<'a, P>, ConfirmedBlockSubscribeError> {
         let rx = provider.subscribe_blocks().await?;
+        debug!("subscribed on eth blocks");
         let newest_block = provider.get_block_number().await?.as_u64();
+        debug!("current eth block is block#{}", newest_block);
         Ok(Self {
             provider,
             rx: Box::pin(rx),
@@ -56,23 +61,26 @@ impl <'a, P: PubsubClient> Stream for ConfirmedBlockStream<'a, P> {
         // poll future if exist
         let this = self.get_mut();
         if let Some(mut fut) = this.last_poll.take() {
+            debug!("polling pending get block future");
             if let Poll::Ready(poll_result) = fut.as_mut().poll(cx) {
-                let result = match poll_result {
+                debug!("get block future is ready");
+                let ret = match poll_result {
                     Ok(block) => {
                         this.last_confirmed_block += 1;
                         Ok(block.unwrap())
-                    },
-                    Err(e) => {
-                        Err(e.into())
                     }
+                    Err(e) => Err(e.into()),
                 };
-                return Poll::Ready(Some(result));
+                return Poll::Ready(Some(ret));
             }
+            debug!("get block future is not ready yet");
             this.last_poll.replace(fut);
+            return Poll::Pending;
         }
 
         // assign future if there is remaining block
         if this.last_confirmed_block < this.newest_block - this.n_confirmations {
+            debug!("assign new future for block#{}", this.last_confirmed_block + 1);
             let fut = Box::pin(this.provider.get_block(this.last_confirmed_block + 1));
             this.last_poll.replace(fut);
             // immediately poll after create
@@ -80,6 +88,7 @@ impl <'a, P: PubsubClient> Stream for ConfirmedBlockStream<'a, P> {
         }
 
         // poll the stream for new block
+        debug!("poll underlying subscribed stream");
         let block = match futures_util::ready!(this.rx.as_mut().poll_next(cx)) {
             Some(block) => block,
             // the stream is terminated
@@ -88,6 +97,7 @@ impl <'a, P: PubsubClient> Stream for ConfirmedBlockStream<'a, P> {
 
         // we got new block here, update
         this.newest_block = block.number.unwrap().as_u64();
+        debug!("newest_block updated to block#{}", this.newest_block);
         return Pin::new(this).poll_next(cx);
     }
 }
