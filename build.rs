@@ -1,13 +1,13 @@
-use std::{fs, env};
 use std::path::Path;
+use std::{env, fs};
 
 use convert_case::{Case, Casing};
 use ethers::abi::{Contract, ParamType};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tera::{Tera, Context};
 use std::collections::HashMap;
 use std::io::Write;
+use tera::{Context, Tera};
 
 #[derive(Debug, Deserialize)]
 struct BuildConfig {
@@ -29,24 +29,23 @@ fn main() -> anyhow::Result<()> {
     let abi_string = serde_json::to_vec(
         parsed_contract
             .get("abi")
-            .expect("missing abi in contract file")
+            .expect("missing abi in contract file"),
     )?;
     let contract = Contract::load(abi_string.as_slice())?;
 
     let events: Vec<Event> = contract
         .events()
-        .map(|event| {
-            Event {
-                name: event.name.to_owned(),
-                signature: format!("{:?}", event.signature().as_fixed_bytes()),
-                inputs: event.inputs
-                    .iter()
-                    .map(|input| Input {
-                        name: input.name.to_owned(),
-                        kind: Type::from(&input.kind)
-                    })
-                    .collect()
-            }
+        .map(|event| Event {
+            name: event.name.to_owned(),
+            signature: format!("{:?}", event.signature().as_fixed_bytes()),
+            inputs: event
+                .inputs
+                .iter()
+                .map(|input| Input {
+                    name: input.name.to_owned(),
+                    kind: Type::from(&input.kind),
+                })
+                .collect(),
         })
         .collect();
 
@@ -71,31 +70,39 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn upper_snake(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
-    Ok(Value::String(value.as_str().unwrap().to_case(Case::UpperSnake)))
+    Ok(Value::String(
+        value.as_str().unwrap().to_case(Case::UpperSnake),
+    ))
 }
 fn lower_snake(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
     Ok(Value::String(value.as_str().unwrap().to_case(Case::Snake)))
 }
 fn upper_camel(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
-    Ok(Value::String(value.as_str().unwrap().to_case(Case::UpperCamel)))
+    Ok(Value::String(
+        value.as_str().unwrap().to_case(Case::UpperCamel),
+    ))
 }
 fn normalize_type(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
     let literal = match Type::deserialize(value)? {
         Type::Address => "::ethers::types::Address".to_string(),
         Type::Bytes => "Vec<u8>".to_string(),
-        Type::Int(size) => if size <= 128 {
-            format!("i{}", size)
-        } else {
-            "::ethers::types::I256".to_string()
+        Type::Int(size) => {
+            if size <= 128 {
+                format!("i{}", size)
+            } else {
+                "::ethers::types::I256".to_string()
+            }
         }
-        Type::Uint(size) => if size <= 128 {
-            format!("u{}", size)
-        } else {
-            "::ethers::types::U256".to_string()
+        Type::Uint(size) => {
+            if size <= 128 {
+                format!("u{}", size)
+            } else {
+                "::ethers::types::U256".to_string()
+            }
         }
         Type::Bool => "bool".to_string(),
         Type::String => "String".to_string(),
-        Type::FixedBytes(size) => format!("[u8; {}]", size)
+        Type::FixedBytes(size) => format!("[u8; {}]", size),
     };
     Ok(Value::String(literal))
 }
@@ -115,19 +122,23 @@ fn normalized_parse(value: &Value, _: &HashMap<String, Value>) -> tera::Result<V
     let literal = match Type::deserialize(value)? {
         Type::Address => ".into_address().unwrap()".to_string(),
         Type::Bytes => ".into_bytes().unwrap()".to_string(),
-        Type::Int(size) => if size <= 64 {
-            format!(".into_int().unwrap().as_u64() as u{}", size)
-        } else if size <= 128 {
-            ".into_int().unwrap().as_u128()".to_string()
-        } else {
-            ".into_int().unwrap()".to_string()
+        Type::Int(size) => {
+            if size <= 64 {
+                format!(".into_int().unwrap().as_u64() as u{}", size)
+            } else if size <= 128 {
+                ".into_int().unwrap().as_u128()".to_string()
+            } else {
+                ".into_int().unwrap()".to_string()
+            }
         }
-        Type::Uint(size) => if size <= 64 {
-            format!(".into_uint().unwrap().as_u64() as u{}", size)
-        } else if size <= 128 {
-            ".into_uint().unwrap().as_u128()".to_string()
-        } else {
-            ".into_uint().unwrap()".to_string()
+        Type::Uint(size) => {
+            if size <= 64 {
+                format!(".into_uint().unwrap().as_u64() as u{}", size)
+            } else if size <= 128 {
+                ".into_uint().unwrap().as_u128()".to_string()
+            } else {
+                ".into_uint().unwrap()".to_string()
+            }
         }
         Type::Bool => ".into_bool().unwrap()".to_string(),
         Type::String => ".into_string().unwrap()".to_string(),

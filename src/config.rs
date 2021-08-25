@@ -26,8 +26,9 @@ pub struct Exchange {
 impl Config {
     fn init() -> Self {
         let file = fs::read_to_string(
-            env::var("LISTENER_CONFIG").unwrap_or_else(|_| "config.toml".to_string())
-        ).unwrap();
+            env::var("LISTENER_CONFIG").unwrap_or_else(|_| "config.toml".to_string()),
+        )
+        .unwrap();
         toml::from_str(&file).unwrap()
     }
 

@@ -18,17 +18,17 @@ pub enum ConfirmedBlockStreamError {
     Provider(#[from] ProviderError),
 }
 
-
 pub struct ConfirmedBlockStream<'a, P: PubsubClient> {
     provider: &'a Provider<P>,
     rx: Pin<Box<SubscriptionStream<'a, P, Block<H256>>>>,
     last_confirmed_block: u64,
     newest_block: u64,
     n_confirmations: u64,
-    last_poll: Option<Pin<Box<(dyn Future<Output=Result<Option<Block<H256>>, ProviderError>> + 'a)>>>
+    last_poll:
+        Option<Pin<Box<(dyn Future<Output = Result<Option<Block<H256>>, ProviderError>> + 'a)>>>,
 }
 
-impl <'a, P: PubsubClient> ConfirmedBlockStream<'a, P> {
+impl<'a, P: PubsubClient> ConfirmedBlockStream<'a, P> {
     pub async fn new(
         provider: &'a Provider<P>,
         from: u64,
@@ -49,7 +49,7 @@ impl <'a, P: PubsubClient> ConfirmedBlockStream<'a, P> {
     }
 }
 
-impl <'a, P: PubsubClient> Stream for ConfirmedBlockStream<'a, P> {
+impl<'a, P: PubsubClient> Stream for ConfirmedBlockStream<'a, P> {
     type Item = Result<Block<H256>, ConfirmedBlockStreamError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -75,7 +75,10 @@ impl <'a, P: PubsubClient> Stream for ConfirmedBlockStream<'a, P> {
 
         // assign future if there is remaining block
         if this.last_confirmed_block < this.newest_block - this.n_confirmations {
-            debug!("assign new future for block#{}", this.last_confirmed_block + 1);
+            debug!(
+                "assign new future for block#{}",
+                this.last_confirmed_block + 1
+            );
             let fut = Box::pin(this.provider.get_block(this.last_confirmed_block + 1));
             this.last_poll.replace(fut);
             // immediately poll after create
