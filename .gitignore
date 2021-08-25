@@ -1,3 +1,4 @@
 /target
 /src/events.rs
 /build-config.toml
+/config.toml

@@ -7,9 +7,12 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::future::Future;
 
+pub mod config;
 pub mod events {
     include!(concat!(env!("OUT_DIR"), "/events.rs"));
 }
+
+pub use crate::config::CONFIG;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ConfirmedBlockSubscribeError {

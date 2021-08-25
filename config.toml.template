@@ -1,0 +1,7 @@
+[web3]
+web3_url = "${WEB3_URL}"
+contract_address = "${CONTRACT_ADDRESS}"
+
+[exchange]
+grpc_endpoint = "${EXCHANGE_GRPC}"
+rest_endpoint = "${EXCHANGE_REST}"
