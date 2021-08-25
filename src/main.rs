@@ -5,11 +5,12 @@ use std::convert::TryFrom;
 
 use anyhow::Result;
 use ethers::prelude::*;
+
+use eth_listener::ConfirmedBlockStream;
 use eth_listener::CONFIG;
 use eth_listener::events::*;
-use eth_listener::{ConfirmedBlockStream};
-use eth_listener::exchange::UserInfo;
 use eth_listener::exchange::matchengine_client::MatchengineClient;
+use eth_listener::exchange::UserInfo;
 
 #[tokio::main]
 async fn main() -> Result<()> {
