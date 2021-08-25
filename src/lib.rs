@@ -13,6 +13,7 @@ pub mod events {
 }
 
 pub use crate::config::CONFIG;
+pub use orchestra::rpc::exchange;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ConfirmedBlockSubscribeError {

@@ -484,6 +484,7 @@ dependencies = [
  "ethers",
  "futures",
  "futures-util",
+ "hex",
  "log",
  "once_cell",
  "orchestra",
