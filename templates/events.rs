@@ -24,7 +24,7 @@ pub enum Events {
 {% for event in events %}
 #[derive(Debug, Clone, ::serde::Serialize, ::serde::Deserialize)]
 pub struct {{ event.name | upper_camel }} {
-    {% for input in event.inputs %}{{ input.name | lower_snake }}: {{ input.kind | normalize_type }},
+    {% for input in event.inputs %}pub {{ input.name | lower_snake }}: {{ input.kind | normalize_type }},
     {% endfor %}
 }
 {% endfor %}
