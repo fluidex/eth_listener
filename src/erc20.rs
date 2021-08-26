@@ -2,6 +2,9 @@ use ethers::abi::Abi;
 use ethers::prelude::*;
 use std::ops::Deref;
 
+use crate::restapi::Asset;
+use hex::ToHex;
+
 const MIN_ABI: &str = r#"[
   {
     "name":"symbol",
@@ -37,14 +40,14 @@ static ABI: Lazy<Abi> = Lazy::new(|| serde_json::from_str(MIN_ABI).unwrap());
 
 #[derive(Debug, Clone)]
 pub struct ERC20 {
+    address: Address,
     symbol: String,
     name: String,
-    decimals: u8,
 }
 
 impl ERC20 {
     pub async fn query<P: JsonRpcClient>(client: Provider<P>, address: Address) -> Self {
-        let contract = Contract::new(address, ABI.deref().clone(), client);
+        let contract = Contract::new(address.clone(), ABI.deref().clone(), client);
 
         let symbol = contract
             .method::<_, String>("symbol", ()).unwrap()
@@ -58,16 +61,27 @@ impl ERC20 {
             .await
             .unwrap_or_else(|_| "".to_string());
 
-        let decimals = contract
-            .method::<_, u8>("u8", ()).unwrap()
-            .call()
-            .await
-            .unwrap_or(18);
-
         Self {
+            address,
             symbol,
             name,
-            decimals,
+        }
+    }
+}
+
+impl From<ERC20> for Asset {
+    fn from(erc20: ERC20) -> Self {
+        Self {
+            id: erc20.symbol.clone(),
+            symbol: erc20.symbol,
+            name: erc20.name,
+            // reference: dingir-exchange/migrations/20210223072038_markets_preset.sql
+            chain_id: 1,
+            token_address: format!("0x{}", erc20.address.encode_hex()),
+            rollup_token_id: 0,
+            prec_save: 0,
+            prec_show: 0,
+            logo_uri: "".to_string()
         }
     }
 }
