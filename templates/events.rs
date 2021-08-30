@@ -26,6 +26,7 @@ pub enum Events {
 pub struct {{ event.name | upper_camel }} {
     {% for input in event.inputs %}pub {{ input.name | lower_snake }}: {{ input.kind | normalize_type }},
     {% endfor %}
+    pub origin: ::ethers::types::Log,
 }
 {% endfor %}
 
@@ -75,6 +76,7 @@ impl ::std::convert::TryFrom<::ethers::types::Log> for {{ event.name | upper_cam
             {% for input in event.inputs %}
             {{ input.name | lower_snake }}: decoded.remove(0){{ input.kind | normalized_parse }},
             {% endfor %}
+            origin: log,
         })
     }
 }
