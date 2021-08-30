@@ -3,7 +3,6 @@ use ethers::prelude::*;
 use std::ops::Deref;
 
 use crate::restapi::Asset;
-use hex::ToHex;
 
 const MIN_ABI: &str = r#"[
   {
@@ -43,6 +42,7 @@ pub struct ERC20 {
     address: Address,
     symbol: String,
     name: String,
+    decimals: u8,
 }
 
 impl ERC20 {
@@ -61,10 +61,17 @@ impl ERC20 {
             .await
             .unwrap_or_else(|_| "".to_string());
 
+        let decimals = contract
+            .method::<_, u8>("decimals", ()).unwrap()
+            .call()
+            .await
+            .unwrap();
+
         Self {
             address,
             symbol,
             name,
+            decimals,
         }
     }
 }
@@ -77,10 +84,11 @@ impl From<ERC20> for Asset {
             name: erc20.name,
             // reference: dingir-exchange/migrations/20210223072038_markets_preset.sql
             chain_id: 1,
-            token_address: format!("0x{}", erc20.address.encode_hex()),
+            token_address: format!("{:#x}", erc20.address),
             rollup_token_id: 0,
-            prec_save: 0,
-            prec_show: 0,
+            // TODO: review this
+            prec_save: 6,
+            prec_show: 6,
             logo_uri: "".to_string()
         }
     }
