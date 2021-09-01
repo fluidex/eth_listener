@@ -49,9 +49,22 @@ impl <'a, P: JsonRpcClient> ContractInfos<'a, P> {
     pub async fn add_token(&mut self, address: Address, token_id: u16) -> Asset {
         self.token_ids.insert(token_id, address);
         self.token_addresses.insert(address, token_id);
+        let erc20 = self.fetch_erc20(address).await;
+        (erc20, token_id).into()
+    }
+
+    pub async fn fetch_erc20(&mut self, address: Address) -> ERC20 {
+        if let Some(erc20) = self.erc20s.get(&address) {
+            return erc20.clone();
+        }
         let erc20 = ERC20::query(self.provider, address).await;
         self.erc20s.insert(address, erc20.clone());
-        (erc20, token_id).into()
+        return erc20;
+    }
+
+    pub async fn fetch_assets(&mut self, token_id: u16) -> Result<Asset> {
+        let address = self.fetch_token_address(token_id).await?;
+        return (self.fetch_erc20(address).await, token_id).into()
     }
 
     pub async fn fetch_token_address(&mut self, token_id: u16) -> Result<Address> {

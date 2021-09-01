@@ -39,10 +39,10 @@ static ABI: Lazy<Abi> = Lazy::new(|| serde_json::from_str(MIN_ABI).unwrap());
 
 #[derive(Debug, Clone)]
 pub struct ERC20 {
-    address: Address,
-    symbol: String,
-    name: String,
-    decimals: u8,
+    pub address: Address,
+    pub symbol: String,
+    pub name: String,
+    pub decimals: u8,
 }
 
 impl ERC20 {
