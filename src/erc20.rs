@@ -46,7 +46,7 @@ pub struct ERC20 {
 }
 
 impl ERC20 {
-    pub async fn query<P: JsonRpcClient>(client: Provider<P>, address: Address) -> Self {
+    pub async fn query<P: JsonRpcClient>(client: &Provider<P>, address: Address) -> Self {
         let contract = Contract::new(address.clone(), ABI.deref().clone(), client);
 
         let symbol = contract
@@ -76,8 +76,8 @@ impl ERC20 {
     }
 }
 
-impl From<ERC20> for Asset {
-    fn from(erc20: ERC20) -> Self {
+impl From<(ERC20, u16)> for Asset {
+    fn from((erc20, token_id): (ERC20, u16)) -> Self {
         Self {
             id: erc20.symbol.clone(),
             symbol: erc20.symbol,
@@ -85,7 +85,7 @@ impl From<ERC20> for Asset {
             // reference: dingir-exchange/migrations/20210223072038_markets_preset.sql
             chain_id: 1,
             token_address: format!("{:#x}", erc20.address),
-            rollup_token_id: 0,
+            rollup_token_id: token_id as i32,
             // TODO: review this
             prec_save: 6,
             prec_show: 6,
