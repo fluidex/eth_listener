@@ -18,6 +18,7 @@ pub struct ContractInfos<'a, P> {
     contract: Contract<&'a Provider<P>>,
     token_ids: HashMap<u16, Address>,
     token_addresses: HashMap<Address, u16>,
+    user_ids: HashMap<[u8; 32], u16>,
     erc20s: HashMap<Address, ERC20>,
 }
 
@@ -40,6 +41,7 @@ impl <'a, P: JsonRpcClient> ContractInfos<'a, P> {
             contract,
             token_ids: HashMap::new(),
             token_addresses: HashMap::new(),
+            user_ids: HashMap::new(),
             erc20s: HashMap::new(),
         }
     }
@@ -52,7 +54,7 @@ impl <'a, P: JsonRpcClient> ContractInfos<'a, P> {
         (erc20, token_id).into()
     }
 
-    async fn fetch_token_address(&mut self, token_id: u16) -> Result<Address> {
+    pub async fn fetch_token_address(&mut self, token_id: u16) -> Result<Address> {
         if let Some(address) = self.token_ids.get(&token_id) {
             return Ok(*address)
         }
@@ -67,7 +69,7 @@ impl <'a, P: JsonRpcClient> ContractInfos<'a, P> {
         Ok(address)
     }
 
-    async fn fetch_token_id(&mut self, address: Address) -> Result<u16> {
+    pub async fn fetch_token_id(&mut self, address: Address) -> Result<u16> {
         if let Some(token_id) = self.token_addresses.get(&address) {
             return Ok(*token_id)
         }
@@ -80,5 +82,19 @@ impl <'a, P: JsonRpcClient> ContractInfos<'a, P> {
         self.token_addresses.insert(address, token_id);
         self.add_token(address, token_id).await;
         Ok(token_id)
+    }
+
+    pub async fn fetch_user_id(&mut self, pubkey: &[u8; 32]) -> Result<u16> {
+        if let Some(user_id) = self.user_ids.get(&pubkey) {
+            return Ok(*user_id)
+        }
+        let user_id = self.contract
+            .method::<Vec<u8>, u16>("userBjjPubkeyToUserId", pubkey.to_vec()).unwrap()
+            .call()
+            .await
+            .map_err(|e| ContractInfoError::ContractError(format!("{:?}", e)))?;
+        self.user_ids.insert(*pubkey, user_id);
+        self.user_pubkey.insert(user_id, *pubkey);
+        OK(user_id)
     }
 }
