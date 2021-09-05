@@ -76,22 +76,39 @@ async fn main() -> Result<()> {
         for event in events {
             match event {
                 Events::Deposit(deposit) => {
-                    let address = contract_infos.fetch_token_address(deposit.token_id).await?;
-                    let erc20 = contract_infos.fetch_erc20(address).await;
                     let user_id = contract_infos.fetch_user_id(deposit.to).await?;
                     let mut delta = Decimal::from_str(deposit.amount)?;
                     delta.set_scale(erc20.decimals as u32)?;
-                    grpc_client
-                        .balance_update(BalanceUpdateRequest {
-                            user_id: user_id as u32,
-                            asset: erc20.name,
-                            business: "".to_string(),
-                            business_id: 0,
-                            delta: format!("{}", delta),
-                            detail: "".to_string(),
-                            log_metadata: Some(deposit.origin.to_log_meta())
-                        })
-                        .await?;
+                    if deposit.token_id == 0 {
+                        // we are dealing with an ETH deposit request
+                        grpc_client
+                            .balance_update(BalanceUpdateRequest {
+                                user_id: user_id as u32,
+                                asset: "ETH".to_string(),
+                                business: "".to_string(),
+                                business_id: 0,
+                                delta: format!("{}", delta),
+                                detail: "".to_string(),
+                                log_metadata: Some(deposit.origin.to_log_meta())
+                            })
+                            .await?;
+                    } else {
+                        // we are dealing with an ERC20 deposit request
+                        let address = contract_infos.fetch_token_address(deposit.token_id).await?;
+                        let erc20 = contract_infos.fetch_erc20(address).await;
+                        grpc_client
+                            .balance_update(BalanceUpdateRequest {
+                                user_id: user_id as u32,
+                                asset: erc20.name,
+                                business: "".to_string(),
+                                business_id: 0,
+                                delta: format!("{}", delta),
+                                detail: "".to_string(),
+                                log_metadata: Some(deposit.origin.to_log_meta())
+                            })
+                            .await?;
+                    }
+
                 },
                 Events::NewToken(new_token) => {
                     let asset = contract_infos.add_token(new_token.token_addr, new_token.token_id).await;
