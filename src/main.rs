@@ -38,7 +38,7 @@ impl ToLogMeta for Log {
 async fn main() -> Result<()> {
     pretty_env_logger::init();
 
-    println!("{:?}", *CONFIG);
+    info!("{:?}", *CONFIG);
 
     let contract_address: Address = CONFIG.web3().contract_address().parse().unwrap();
 
