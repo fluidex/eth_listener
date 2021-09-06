@@ -70,7 +70,7 @@ async fn main() -> Result<()> {
             .get_logs(&log_filter)
             .await?
             .into_iter()
-            .map(|log| Events::try_from(log))
+            .map(Events::try_from)
             .collect::<Result<Vec<Events>, EventParseError>>()?;
         for event in events {
             match event {

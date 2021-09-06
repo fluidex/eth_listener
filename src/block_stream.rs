@@ -18,14 +18,15 @@ pub enum ConfirmedBlockStreamError {
     Provider(#[from] ProviderError),
 }
 
+type PollResult = Result<Option<Block<H256>>, ProviderError>;
+
 pub struct ConfirmedBlockStream<'a, P: PubsubClient> {
     provider: &'a Provider<P>,
     rx: Pin<Box<SubscriptionStream<'a, P, Block<H256>>>>,
     last_confirmed_block: u64,
     newest_block: u64,
     n_confirmations: u64,
-    last_poll:
-        Option<Pin<Box<(dyn Future<Output = Result<Option<Block<H256>>, ProviderError>> + 'a)>>>,
+    last_poll: Option<Pin<Box<(dyn Future<Output = PollResult>+ 'a)>>>,
 }
 
 impl<'a, P: PubsubClient> ConfirmedBlockStream<'a, P> {
@@ -96,6 +97,6 @@ impl<'a, P: PubsubClient> Stream for ConfirmedBlockStream<'a, P> {
         // we got new block here, update
         this.newest_block = block.number.unwrap().as_u64();
         debug!("newest_block updated to block#{}", this.newest_block);
-        return Pin::new(this).poll_next(cx);
+        Pin::new(this).poll_next(cx)
     }
 }

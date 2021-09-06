@@ -53,7 +53,7 @@ impl RestClient {
             .await?;
 
         let status = response.status();
-        return if status.is_success() {
+        if status.is_success() {
             Ok(())
         } else {
             Err(RestError::Http(status))

@@ -59,7 +59,7 @@ impl <'a, P: JsonRpcClient> ContractInfos<'a, P> {
         }
         let erc20 = ERC20::query(self.provider, address).await;
         self.erc20s.insert(address, erc20.clone());
-        return erc20;
+        erc20
     }
 
     pub async fn fetch_assets(&mut self, token_id: u16) -> Result<Asset> {
@@ -72,7 +72,7 @@ impl <'a, P: JsonRpcClient> ContractInfos<'a, P> {
             return Ok(*address)
         }
         let address = self.contract
-            .method::<u16, Address>("tokenIdToAddr", token_id.into()).unwrap()
+            .method::<u16, Address>("tokenIdToAddr", token_id).unwrap()
             .call()
             .await
             .map_err(|e| ContractInfoError::ContractError(format!("{:?}", e)))?;
