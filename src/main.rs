@@ -16,6 +16,8 @@ use eth_listener::ConfirmedBlockStream;
 use eth_listener::CONFIG;
 use rust_decimal::Decimal;
 use std::str::FromStr;
+use tonic::transport::Channel;
+use std::time::Duration;
 
 /// A helper to convert ethers Log to EthLogMetadata
 trait ToLogMeta {
@@ -41,7 +43,11 @@ async fn main() -> Result<()> {
     let contract_address: Address = CONFIG.web3().contract_address().parse().unwrap();
 
     let provider = Provider::connect(CONFIG.web3().web3_url()).await?;
-    let mut grpc_client = MatchengineClient::connect(CONFIG.exchange().grpc_endpoint()).await?;
+    let grpc_channel = Channel::from_static(CONFIG.exchange().grpc_endpoint())
+        .connect_timeout(Duration::from_secs(10))
+        .connect()
+        .await?;
+    let mut grpc_client = MatchengineClient::new(grpc_channel);
     let rest_client = RestClient::new(CONFIG.exchange().rest_endpoint());
     let mut contract_infos = ContractInfos::new(&provider, contract_address);
     let persistor = Persistor::new(CONFIG.storage().db(), CONFIG.web3().base_block()).await?;
