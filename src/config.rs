@@ -9,18 +9,25 @@ pub static CONFIG: Lazy<Config> = Lazy::new(Config::init);
 pub struct Config {
     web3: Web3,
     exchange: Exchange,
+    storage: Storage,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Web3 {
     web3_url: String,
     contract_address: String,
+    base_block: u64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Exchange {
     grpc_endpoint: String,
     rest_endpoint: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Storage {
+    db: String,
 }
 
 impl Config {
@@ -39,6 +46,10 @@ impl Config {
     pub fn exchange(&'static self) -> &'static Exchange {
         &self.exchange
     }
+
+    pub fn storage(&'static self) -> &'static Storage {
+        &self.storage
+    }
 }
 
 impl Web3 {
@@ -48,6 +59,9 @@ impl Web3 {
     pub fn contract_address(&'static self) -> &'static str {
         &self.contract_address
     }
+    pub fn base_block(&self) -> u64 {
+        self.base_block
+    }
 }
 
 impl Exchange {
@@ -56,5 +70,11 @@ impl Exchange {
     }
     pub fn rest_endpoint(&'static self) -> &'static str {
         &self.rest_endpoint
+    }
+}
+
+impl Storage {
+    pub fn db(&'static self) -> &'static str {
+        &self.db
     }
 }

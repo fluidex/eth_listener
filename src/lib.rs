@@ -11,6 +11,7 @@ pub mod config;
 pub mod erc20;
 pub mod restapi;
 pub mod infos;
+pub mod persist;
 
 pub mod events {
     include!(concat!(env!("OUT_DIR"), "/events.rs"));

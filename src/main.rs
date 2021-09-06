@@ -13,6 +13,7 @@ use eth_listener::ConfirmedBlockStream;
 use eth_listener::CONFIG;
 use eth_listener::restapi::{RestClient, NewAssetReq};
 use eth_listener::infos::ContractInfos;
+use eth_listener::persist::Persistor;
 use rust_decimal::Decimal;
 use std::str::FromStr;
 
@@ -43,13 +44,14 @@ async fn main() -> Result<()> {
     let mut grpc_client = MatchengineClient::connect(CONFIG.exchange().grpc_endpoint()).await?;
     let rest_client = RestClient::new(CONFIG.exchange().rest_endpoint());
     let mut contract_infos = ContractInfos::new(&provider, contract_address);
+    let persistor = Persistor::new(CONFIG.storage().db(), CONFIG.web3().base_block()).await?;
 
     info!("start listening on eth net");
 
     let mut confirmed_stream =
         ConfirmedBlockStream::new(
             &provider,
-            provider.get_block_number().await?.as_u64(), // TODO: replace with block height from db.
+            persistor.get_block_number().await?,
             3)
             .await?;
 
@@ -132,7 +134,7 @@ async fn main() -> Result<()> {
                 }
             }
         }
-        // TODO: update the current block height.
+        persistor.save_block_number(block_number.as_u64()).await?;
     }
 
     Ok(())
