@@ -48,9 +48,15 @@ async fn main() -> Result<()> {
         .connect()
         .await?;
     let mut grpc_client = MatchengineClient::new(grpc_channel);
+    info!("grpc client ready");
+
     let rest_client = RestClient::new(CONFIG.exchange().rest_endpoint());
+    info!("rest client ready");
+
     let mut contract_infos = ContractInfos::new(&provider, contract_address);
+
     let persistor = Persistor::new(CONFIG.storage().db(), CONFIG.web3().base_block()).await?;
+    info!("persistor ready");
 
     info!("start listening on eth net");
 
