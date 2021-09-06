@@ -1,11 +1,12 @@
-use std::collections::HashMap;
+use crate::erc20::ERC20;
+use crate::restapi::Asset;
 use ethers::abi::Abi;
 use ethers::prelude::*;
 use serde::Deserialize;
-use crate::erc20::ERC20;
-use crate::restapi::Asset;
+use std::collections::HashMap;
 
-const CONTRACT_ABI: &str = include_str!("../contracts/artifacts/contracts/Fluidex.sol/FluidexDemo.json");
+const CONTRACT_ABI: &str =
+    include_str!("../contracts/artifacts/contracts/Fluidex.sol/FluidexDemo.json");
 
 #[derive(Deserialize)]
 struct ContractMeta {
@@ -30,8 +31,7 @@ pub enum ContractInfoError {
 
 type Result<T, E = ContractInfoError> = std::result::Result<T, E>;
 
-impl <'a, P: JsonRpcClient> ContractInfos<'a, P> {
-
+impl<'a, P: JsonRpcClient> ContractInfos<'a, P> {
     pub fn new(provider: &'a Provider<P>, address: Address) -> Self {
         let meta: ContractMeta = serde_json::from_str(CONTRACT_ABI).unwrap();
         let contract = Contract::new(address, meta.abi, provider);
@@ -64,15 +64,17 @@ impl <'a, P: JsonRpcClient> ContractInfos<'a, P> {
 
     pub async fn fetch_assets(&mut self, token_id: u16) -> Result<Asset> {
         let address = self.fetch_token_address(token_id).await?;
-        return Ok((self.fetch_erc20(address).await, token_id).into())
+        return Ok((self.fetch_erc20(address).await, token_id).into());
     }
 
     pub async fn fetch_token_address(&mut self, token_id: u16) -> Result<Address> {
         if let Some(address) = self.token_ids.get(&token_id) {
-            return Ok(*address)
+            return Ok(*address);
         }
-        let address = self.contract
-            .method::<u16, Address>("tokenIdToAddr", token_id).unwrap()
+        let address = self
+            .contract
+            .method::<u16, Address>("tokenIdToAddr", token_id)
+            .unwrap()
             .call()
             .await
             .map_err(|e| ContractInfoError::ContractError(format!("{:?}", e)))?;
@@ -84,10 +86,12 @@ impl <'a, P: JsonRpcClient> ContractInfos<'a, P> {
 
     pub async fn fetch_token_id(&mut self, address: Address) -> Result<u16> {
         if let Some(token_id) = self.token_addresses.get(&address) {
-            return Ok(*token_id)
+            return Ok(*token_id);
         }
-        let token_id = self.contract
-            .method::<Address, u16>("tokenAddrToId", address).unwrap()
+        let token_id = self
+            .contract
+            .method::<Address, u16>("tokenAddrToId", address)
+            .unwrap()
             .call()
             .await
             .map_err(|e| ContractInfoError::ContractError(format!("{:?}", e)))?;
@@ -99,10 +103,12 @@ impl <'a, P: JsonRpcClient> ContractInfos<'a, P> {
 
     pub async fn fetch_user_id(&mut self, pubkey: &[u8; 32]) -> Result<u16> {
         if let Some(user_id) = self.user_ids.get(pubkey) {
-            return Ok(*user_id)
+            return Ok(*user_id);
         }
-        let user_id = self.contract
-            .method::<Vec<u8>, u16>("userBjjPubkeyToUserId", pubkey.to_vec()).unwrap()
+        let user_id = self
+            .contract
+            .method::<Vec<u8>, u16>("userBjjPubkeyToUserId", pubkey.to_vec())
+            .unwrap()
             .call()
             .await
             .map_err(|e| ContractInfoError::ContractError(format!("{:?}", e)))?;

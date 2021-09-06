@@ -8,12 +8,12 @@ use ethers::prelude::*;
 
 use eth_listener::events::*;
 use eth_listener::exchange::matchengine_client::MatchengineClient;
-use eth_listener::exchange::{UserInfo, EthLogMetadata, BalanceUpdateRequest};
-use eth_listener::ConfirmedBlockStream;
-use eth_listener::CONFIG;
-use eth_listener::restapi::{RestClient, NewAssetReq};
+use eth_listener::exchange::{BalanceUpdateRequest, EthLogMetadata, UserInfo};
 use eth_listener::infos::ContractInfos;
 use eth_listener::persist::Persistor;
+use eth_listener::restapi::{NewAssetReq, RestClient};
+use eth_listener::ConfirmedBlockStream;
+use eth_listener::CONFIG;
 use rust_decimal::Decimal;
 use std::str::FromStr;
 
@@ -49,11 +49,7 @@ async fn main() -> Result<()> {
     info!("start listening on eth net");
 
     let mut confirmed_stream =
-        ConfirmedBlockStream::new(
-            &provider,
-            persistor.get_block_number().await?,
-            3)
-            .await?;
+        ConfirmedBlockStream::new(&provider, persistor.get_block_number().await?, 3).await?;
 
     while let Some(block) = confirmed_stream.next().await {
         let block = block?;
@@ -91,7 +87,7 @@ async fn main() -> Result<()> {
                                 business_id: 0,
                                 delta: format!("{}", delta),
                                 detail: "".to_string(),
-                                log_metadata: Some(deposit.origin.to_log_meta())
+                                log_metadata: Some(deposit.origin.to_log_meta()),
                             })
                             .await?;
                     } else {
@@ -107,28 +103,29 @@ async fn main() -> Result<()> {
                                 business_id: 0,
                                 delta: format!("{}", delta),
                                 detail: "".to_string(),
-                                log_metadata: Some(deposit.origin.to_log_meta())
+                                log_metadata: Some(deposit.origin.to_log_meta()),
                             })
                             .await?;
                     }
-
-                },
+                }
                 Events::NewToken(new_token) => {
-                    let asset = contract_infos.add_token(new_token.token_addr, new_token.token_id).await;
+                    let asset = contract_infos
+                        .add_token(new_token.token_addr, new_token.token_id)
+                        .await;
                     rest_client
                         .add_assets(&NewAssetReq {
                             assets: vec![asset],
-                            not_reload: false
+                            not_reload: false,
                         })
                         .await?;
-                },
+                }
                 Events::RegisterUser(register_user) => {
                     grpc_client
                         .register_user(UserInfo {
                             user_id: register_user.user_id as u32,
                             l1_address: register_user.eth_addr.to_string(),
                             l2_pubkey: hex::encode(register_user.bjj_pubkey),
-                            log_metadata: Some(register_user.origin.to_log_meta())
+                            log_metadata: Some(register_user.origin.to_log_meta()),
                         })
                         .await?;
                 }

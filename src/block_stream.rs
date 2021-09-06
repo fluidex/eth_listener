@@ -26,7 +26,7 @@ pub struct ConfirmedBlockStream<'a, P: PubsubClient> {
     last_confirmed_block: u64,
     newest_block: u64,
     n_confirmations: u64,
-    last_poll: Option<Pin<Box<(dyn Future<Output = PollResult>+ 'a)>>>,
+    last_poll: Option<Pin<Box<(dyn Future<Output = PollResult> + 'a)>>>,
 }
 
 impl<'a, P: PubsubClient> ConfirmedBlockStream<'a, P> {

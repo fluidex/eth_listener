@@ -1,5 +1,5 @@
-use serde::{Serialize, Deserialize};
 use reqwest::StatusCode;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct NewAssetReq {
@@ -32,7 +32,7 @@ pub enum RestError {
     #[error("transport error: {0}")]
     Transport(#[from] reqwest::Error),
     #[error("request failed with error: {0}")]
-    Http(StatusCode)
+    Http(StatusCode),
 }
 
 impl RestClient {
@@ -46,11 +46,7 @@ impl RestClient {
     pub async fn add_assets(&self, req: &NewAssetReq) -> Result<(), RestError> {
         let url: String = format!("{}/manage/assets", self.base_url);
 
-        let response = self.client
-            .post(url.as_str())
-            .json(req)
-            .send()
-            .await?;
+        let response = self.client.post(url.as_str()).json(req).send().await?;
 
         let status = response.status();
         if status.is_success() {
@@ -58,6 +54,5 @@ impl RestClient {
         } else {
             Err(RestError::Http(status))
         }
-
     }
 }

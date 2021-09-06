@@ -50,19 +50,22 @@ impl ERC20 {
         let contract = Contract::new(address, ABI.deref().clone(), client);
 
         let symbol = contract
-            .method::<_, String>("symbol", ()).unwrap()
+            .method::<_, String>("symbol", ())
+            .unwrap()
             .call()
             .await
             .unwrap_or_else(|_| "".to_string());
 
         let name = contract
-            .method::<_, String>("name", ()).unwrap()
+            .method::<_, String>("name", ())
+            .unwrap()
             .call()
             .await
             .unwrap_or_else(|_| "".to_string());
 
         let decimals = contract
-            .method::<_, u8>("decimals", ()).unwrap()
+            .method::<_, u8>("decimals", ())
+            .unwrap()
             .call()
             .await
             .unwrap();
@@ -89,7 +92,7 @@ impl From<(ERC20, u16)> for Asset {
             // TODO: review this
             prec_save: 6,
             prec_show: 6,
-            logo_uri: "".to_string()
+            logo_uri: "".to_string(),
         }
     }
 }
