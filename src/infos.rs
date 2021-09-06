@@ -64,7 +64,7 @@ impl <'a, P: JsonRpcClient> ContractInfos<'a, P> {
 
     pub async fn fetch_assets(&mut self, token_id: u16) -> Result<Asset> {
         let address = self.fetch_token_address(token_id).await?;
-        return (self.fetch_erc20(address).await, token_id).into()
+        return Ok((self.fetch_erc20(address).await, token_id).into())
     }
 
     pub async fn fetch_token_address(&mut self, token_id: u16) -> Result<Address> {
@@ -98,7 +98,7 @@ impl <'a, P: JsonRpcClient> ContractInfos<'a, P> {
     }
 
     pub async fn fetch_user_id(&mut self, pubkey: &[u8; 32]) -> Result<u16> {
-        if let Some(user_id) = self.user_ids.get(&pubkey) {
+        if let Some(user_id) = self.user_ids.get(pubkey) {
             return Ok(*user_id)
         }
         let user_id = self.contract
@@ -107,7 +107,6 @@ impl <'a, P: JsonRpcClient> ContractInfos<'a, P> {
             .await
             .map_err(|e| ContractInfoError::ContractError(format!("{:?}", e)))?;
         self.user_ids.insert(*pubkey, user_id);
-        self.user_pubkey.insert(user_id, *pubkey);
-        OK(user_id)
+        Ok(user_id)
     }
 }

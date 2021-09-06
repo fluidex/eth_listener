@@ -15,7 +15,6 @@ use eth_listener::restapi::{RestClient, NewAssetReq};
 use eth_listener::infos::ContractInfos;
 use rust_decimal::Decimal;
 use std::str::FromStr;
-use std::ops::Div;
 
 /// A helper to convert ethers Log to EthLogMetadata
 trait ToLogMeta {
@@ -76,11 +75,12 @@ async fn main() -> Result<()> {
         for event in events {
             match event {
                 Events::Deposit(deposit) => {
-                    let user_id = contract_infos.fetch_user_id(deposit.to).await?;
-                    let mut delta = Decimal::from_str(deposit.amount)?;
-                    delta.set_scale(erc20.decimals as u32)?;
+                    let user_id = contract_infos.fetch_user_id(&deposit.to).await?;
+                    let mut delta = Decimal::from_str(deposit.amount.to_string().as_str())?;
                     if deposit.token_id == 0 {
                         // we are dealing with an ETH deposit request
+                        // 1 ETH = 10^18 wei
+                        delta.set_scale(18)?;
                         grpc_client
                             .balance_update(BalanceUpdateRequest {
                                 user_id: user_id as u32,
@@ -96,6 +96,7 @@ async fn main() -> Result<()> {
                         // we are dealing with an ERC20 deposit request
                         let address = contract_infos.fetch_token_address(deposit.token_id).await?;
                         let erc20 = contract_infos.fetch_erc20(address).await;
+                        delta.set_scale(erc20.decimals as u32)?;
                         grpc_client
                             .balance_update(BalanceUpdateRequest {
                                 user_id: user_id as u32,
