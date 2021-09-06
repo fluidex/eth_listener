@@ -40,7 +40,7 @@ async fn main() -> Result<()> {
 
     let contract_address: Address = CONFIG.web3().contract_address().parse().unwrap();
 
-    let provider = Provider::connect("ws://localhost:8545").await?;
+    let provider = Provider::connect(CONFIG.web3().web3_url()).await?;
     let mut grpc_client = MatchengineClient::connect(CONFIG.exchange().grpc_endpoint()).await?;
     let rest_client = RestClient::new(CONFIG.exchange().rest_endpoint());
     let mut contract_infos = ContractInfos::new(&provider, contract_address);
