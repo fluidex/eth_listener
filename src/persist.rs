@@ -16,7 +16,11 @@ type Result<T, E = PersistorError> = std::result::Result<T, E>;
 impl Persistor {
     pub async fn new(db: &str, base_block: u64) -> Result<Self> {
         let (client, conn) = tokio_postgres::connect(db, NoTls).await?;
-        conn.await?;
+        tokio::spawn(async move {
+            if let Err(e) = conn.await {
+                error!("postgres connection error: {}", e);
+            }
+        });
         Ok(Self { client, base_block })
     }
 
