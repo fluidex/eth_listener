@@ -1,7 +1,7 @@
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct NewAssetReq {
     pub assets: Vec<Asset>,
     #[serde(default)]
@@ -45,7 +45,7 @@ impl RestClient {
 
     pub async fn add_assets(&self, req: &NewAssetReq) -> Result<(), RestError> {
         let url: String = format!("{}/manage/market/assets", self.base_url);
-
+        debug!("rest-client: {:?}", req);
         let response = self.client.post(url.as_str()).json(req).send().await?;
 
         let status = response.status();
