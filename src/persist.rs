@@ -42,7 +42,7 @@ impl Persistor {
         let rows = self
             .client
             .execute(
-                "insert into block_log (block_id) values ($1)",
+                "insert into block_log (block_number) values ($1)",
                 &[&(block_number as i64)],
             )
             .await?;
