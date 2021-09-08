@@ -75,7 +75,7 @@ async fn main() -> Result<()> {
         let log_filter = Filter::default()
             .from_block(block_number)
             .to_block(block_number)
-            .address(CONFIG.web3().web3_url().parse::<Address>().unwrap());
+            .address(CONFIG.web3().contract_address().parse::<Address>().unwrap());
         let events = provider
             .get_logs(&log_filter)
             .await?
