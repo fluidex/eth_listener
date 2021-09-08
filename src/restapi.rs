@@ -44,7 +44,7 @@ impl RestClient {
     }
 
     pub async fn add_assets(&self, req: &NewAssetReq) -> Result<(), RestError> {
-        let url: String = format!("{}/manage/assets", self.base_url);
+        let url: String = format!("{}/manage/market/assets", self.base_url);
 
         let response = self.client.post(url.as_str()).json(req).send().await?;
 
