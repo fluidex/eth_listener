@@ -3,12 +3,12 @@ use std::{env, fs};
 
 use convert_case::{Case, Casing};
 use ethers::abi::{Contract, ParamType};
+use ethers::contract::Abigen;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::io::Write;
 use tera::{Context, Tera};
-use ethers::contract::Abigen;
 
 #[derive(Debug, Deserialize)]
 struct BuildConfig {
@@ -34,7 +34,9 @@ fn main() -> anyhow::Result<()> {
     )?;
     let abi = parsed_contract.get("abi").unwrap();
     let bindings = Abigen::new("Fluidex", serde_json::to_string(abi).unwrap())?.generate()?;
-    bindings.write_to_file(Path::new(&out_dir).join("fluidex.rs")).unwrap();
+    bindings
+        .write_to_file(Path::new(&out_dir).join("fluidex.rs"))
+        .unwrap();
     let contract = Contract::load(abi_string.as_slice())?;
 
     let events: Vec<Event> = contract

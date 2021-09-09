@@ -2,12 +2,11 @@
 extern crate log;
 
 use std::convert::TryFrom;
-use std::time::Duration;
-use std::sync::Arc;
 use std::str::FromStr;
+use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Result;
-use ethers::prelude::*;
 use eth_listener::events::*;
 use eth_listener::exchange::matchengine_client::MatchengineClient;
 use eth_listener::exchange::{BalanceUpdateRequest, EthLogMetadata, UserInfo};
@@ -16,6 +15,7 @@ use eth_listener::persist::Persistor;
 use eth_listener::restapi::{NewAssetReq, RestClient};
 use eth_listener::ConfirmedBlockStream;
 use eth_listener::CONFIG;
+use ethers::prelude::*;
 use rust_decimal::Decimal;
 use tonic::transport::Channel;
 

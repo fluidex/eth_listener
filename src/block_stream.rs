@@ -65,14 +65,13 @@ impl<'a, P: PubsubClient> Stream for ConfirmedBlockStream<'a, P> {
                         this.last_confirmed_block += block.number.unwrap().as_u64();
                         debug!(
                             "confirm block#{} (latest block at #{})",
-                            this.last_confirmed_block,
-                            this.newest_block,
+                            this.last_confirmed_block, this.newest_block,
                         );
                         Ok(block)
-                    },
+                    }
                     Ok(None) => {
                         panic!("polling got empty result");
-                    },
+                    }
                     Err(e) => Err(e.into()),
                 };
                 return Poll::Ready(Some(ret));
@@ -83,7 +82,7 @@ impl<'a, P: PubsubClient> Stream for ConfirmedBlockStream<'a, P> {
         }
 
         // assign future if there is remaining block
-        if this.last_confirmed_block < this.newest_block.saturating_sub(this.n_confirmations)  {
+        if this.last_confirmed_block < this.newest_block.saturating_sub(this.n_confirmations) {
             debug!(
                 "assign new future for block#{} (latest block at #{})",
                 this.last_confirmed_block + 1,
