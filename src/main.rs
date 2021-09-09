@@ -95,7 +95,7 @@ async fn main() -> Result<()> {
                             .balance_update(BalanceUpdateRequest {
                                 user_id: user_id as u32,
                                 asset: "ETH".to_string(),
-                                business: "".to_string(),
+                                business: "deposit".to_string(),
                                 business_id: 0,
                                 delta: format!("{}", delta),
                                 detail: "".to_string(),
@@ -111,7 +111,7 @@ async fn main() -> Result<()> {
                             .balance_update(BalanceUpdateRequest {
                                 user_id: user_id as u32,
                                 asset: erc20.name,
-                                business: "".to_string(),
+                                business: "deposit".to_string(),
                                 business_id: 0,
                                 delta: format!("{}", delta),
                                 detail: "".to_string(),
