@@ -4,7 +4,7 @@ extern crate log;
 use std::convert::TryFrom;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::Result;
 use eth_listener::events::*;
@@ -18,6 +18,7 @@ use eth_listener::CONFIG;
 use ethers::prelude::*;
 use rust_decimal::Decimal;
 use tonic::transport::Channel;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 /// A helper to convert ethers Log to EthLogMetadata
 trait ToLogMeta {
@@ -32,6 +33,11 @@ impl ToLogMeta for Log {
             log_index: format!("{:#x}", self.log_index.unwrap()),
         }
     }
+}
+
+fn get_business_id() -> u64 {
+    static BUSINESS_ID_SERIAL: AtomicU64 = AtomicU64::new(0);
+    BUSINESS_ID_SERIAL.fetch_add(1, Ordering::SeqCst)
 }
 
 #[tokio::main]
@@ -97,7 +103,7 @@ async fn main() -> Result<()> {
                                 user_id: user_id as u32,
                                 asset: "ETH".to_string(),
                                 business: "deposit".to_string(),
-                                business_id: 0,
+                                business_id: get_business_id(),
                                 delta: format!("{}", delta),
                                 detail: "".to_string(),
                                 log_metadata: Some(deposit.origin.to_log_meta()),
@@ -113,7 +119,7 @@ async fn main() -> Result<()> {
                                 user_id: user_id as u32,
                                 asset: erc20.name,
                                 business: "deposit".to_string(),
-                                business_id: 0,
+                                business_id: get_business_id(),
                                 delta: format!("{}", delta),
                                 detail: "".to_string(),
                                 log_metadata: Some(deposit.origin.to_log_meta()),
