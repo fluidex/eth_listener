@@ -83,7 +83,7 @@ impl<'a, P: PubsubClient> Stream for ConfirmedBlockStream<'a, P> {
         }
 
         // assign future if there is remaining block
-        if this.last_confirmed_block < this.newest_block - this.n_confirmations {
+        if this.last_confirmed_block < this.newest_block.checked_sub(this.n_confirmations).unwrap_or(0)  {
             debug!(
                 "assign new future for block#{} (latest block at #{})",
                 this.last_confirmed_block + 1,
