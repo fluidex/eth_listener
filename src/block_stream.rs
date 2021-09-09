@@ -59,11 +59,15 @@ impl<'a, P: PubsubClient> Stream for ConfirmedBlockStream<'a, P> {
         if let Some(mut fut) = this.last_poll.take() {
             debug!("polling pending get block future");
             if let Poll::Ready(poll_result) = fut.as_mut().poll(cx) {
-                debug!("get block future is ready");
+                trace!("get block future is ready");
                 let ret = match poll_result {
                     Ok(Some(block)) => {
                         this.last_confirmed_block += block.number.unwrap().as_u64();
-                        debug!("confirm block#{}", this.last_confirmed_block);
+                        debug!(
+                            "confirm block#{} (latest block at #{})",
+                            this.last_confirmed_block,
+                            this.newest_block,
+                        );
                         Ok(block)
                     },
                     Ok(None) => {
@@ -73,7 +77,7 @@ impl<'a, P: PubsubClient> Stream for ConfirmedBlockStream<'a, P> {
                 };
                 return Poll::Ready(Some(ret));
             }
-            debug!("get block future is not ready yet");
+            trace!("get block future is not ready yet");
             this.last_poll.replace(fut);
             return Poll::Pending;
         }
@@ -81,8 +85,9 @@ impl<'a, P: PubsubClient> Stream for ConfirmedBlockStream<'a, P> {
         // assign future if there is remaining block
         if this.last_confirmed_block < this.newest_block - this.n_confirmations {
             debug!(
-                "assign new future for block#{}",
-                this.last_confirmed_block + 1
+                "assign new future for block#{} (latest block at #{})",
+                this.last_confirmed_block + 1,
+                this.newest_block,
             );
             let fut = Box::pin(this.provider.get_block(this.last_confirmed_block + 1));
             this.last_poll.replace(fut);
