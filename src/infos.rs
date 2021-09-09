@@ -107,7 +107,7 @@ impl<'a, P: JsonRpcClient> ContractInfos<'a, P> {
         }
         let user_id = self
             .contract
-            .method::<Vec<u8>, u16>("userBjjPubkeyToUserId", pubkey.to_vec())
+            .method::<[u8; 32], u16>("userBjjPubkeyToUserId", *pubkey)
             .unwrap()
             .call()
             .await
