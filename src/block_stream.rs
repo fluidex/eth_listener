@@ -62,7 +62,7 @@ impl<'a, P: PubsubClient> Stream for ConfirmedBlockStream<'a, P> {
                 trace!("get block future is ready");
                 let ret = match poll_result {
                     Ok(Some(block)) => {
-                        this.last_confirmed_block += block.number.unwrap().as_u64();
+                        this.last_confirmed_block = block.number.unwrap().as_u64();
                         debug!(
                             "confirm block#{} (latest block at #{})",
                             this.last_confirmed_block, this.newest_block,
