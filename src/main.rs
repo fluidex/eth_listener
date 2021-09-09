@@ -83,6 +83,7 @@ async fn main() -> Result<()> {
             .map(Events::try_from)
             .collect::<Result<Vec<Events>, EventParseError>>()?;
         for event in events {
+            info!("process event: {:?}", event);
             match event {
                 Events::Deposit(deposit) => {
                     let user_id = contract_infos.fetch_user_id(&deposit.to).await?;
