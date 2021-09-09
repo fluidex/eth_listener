@@ -1,22 +1,16 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use ethers::prelude::*;
+
 use crate::erc20::ERC20;
 use crate::restapi::Asset;
-use ethers::abi::Abi;
-use ethers::prelude::*;
-use serde::Deserialize;
-use std::collections::HashMap;
-
-const CONTRACT_ABI: &str =
-    include_str!("../contracts/artifacts/contracts/Fluidex.sol/FluidexDemo.json");
-
-#[derive(Deserialize)]
-struct ContractMeta {
-    abi: Abi,
-}
+use crate::Fluidex;
 
 #[derive(Debug, Clone)]
-pub struct ContractInfos<'a, P> {
-    provider: &'a Provider<P>,
-    contract: Contract<&'a Provider<P>>,
+pub struct ContractInfos<M: Middleware> {
+    provider: Arc<M>,
+    contract: Fluidex<M>,
     token_ids: HashMap<u16, Address>,
     token_addresses: HashMap<Address, u16>,
     user_ids: HashMap<[u8; 32], u16>,
@@ -31,10 +25,9 @@ pub enum ContractInfoError {
 
 type Result<T, E = ContractInfoError> = std::result::Result<T, E>;
 
-impl<'a, P: JsonRpcClient> ContractInfos<'a, P> {
-    pub fn new(provider: &'a Provider<P>, address: Address) -> Self {
-        let meta: ContractMeta = serde_json::from_str(CONTRACT_ABI).unwrap();
-        let contract = Contract::new(address, meta.abi, provider);
+impl<M: Middleware> ContractInfos<M> {
+    pub fn new(provider: Arc<M>, address: Address) -> Self {
+        let contract = Fluidex::new(address, provider.clone());
 
         ContractInfos {
             provider,
@@ -57,7 +50,7 @@ impl<'a, P: JsonRpcClient> ContractInfos<'a, P> {
         if let Some(erc20) = self.erc20s.get(&address) {
             return erc20.clone();
         }
-        let erc20 = ERC20::query(self.provider, address).await;
+        let erc20 = ERC20::query(&self.provider, address).await;
         self.erc20s.insert(address, erc20.clone());
         erc20
     }
@@ -73,8 +66,7 @@ impl<'a, P: JsonRpcClient> ContractInfos<'a, P> {
         }
         let address = self
             .contract
-            .method::<u16, Address>("tokenIdToAddr", token_id)
-            .unwrap()
+            .token_id_to_addr(token_id)
             .call()
             .await
             .map_err(|e| ContractInfoError::ContractError(format!("{:?}", e)))?;
@@ -90,8 +82,7 @@ impl<'a, P: JsonRpcClient> ContractInfos<'a, P> {
         }
         let token_id = self
             .contract
-            .method::<Address, u16>("tokenAddrToId", address)
-            .unwrap()
+            .token_addr_to_id(address)
             .call()
             .await
             .map_err(|e| ContractInfoError::ContractError(format!("{:?}", e)))?;
@@ -107,8 +98,7 @@ impl<'a, P: JsonRpcClient> ContractInfos<'a, P> {
         }
         let user_id = self
             .contract
-            .method::<[u8; 32], u16>("userBjjPubkeyToUserId", *pubkey)
-            .unwrap()
+            .user_bjj_pubkey_to_user_id(*pubkey)
             .call()
             .await
             .map_err(|e| ContractInfoError::ContractError(format!("{:?}", e)))?;

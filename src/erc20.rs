@@ -46,7 +46,7 @@ pub struct ERC20 {
 }
 
 impl ERC20 {
-    pub async fn query<P: JsonRpcClient>(client: &Provider<P>, address: Address) -> Self {
+    pub async fn query<M: Middleware>(client: M, address: Address) -> Self {
         let contract = Contract::new(address, ABI.deref().clone(), client);
 
         let symbol = contract
