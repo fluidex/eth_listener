@@ -61,10 +61,14 @@ impl<'a, P: PubsubClient> Stream for ConfirmedBlockStream<'a, P> {
             if let Poll::Ready(poll_result) = fut.as_mut().poll(cx) {
                 debug!("get block future is ready");
                 let ret = match poll_result {
-                    Ok(block) => {
-                        this.last_confirmed_block += 1;
-                        Ok(block.unwrap())
-                    }
+                    Ok(Some(block)) => {
+                        this.last_confirmed_block += block.number.unwrap().as_u64();
+                        debug!("confirm block#{}", this.last_confirmed_block);
+                        Ok(block)
+                    },
+                    Ok(None) => {
+                        panic!("polling got empty result");
+                    },
                     Err(e) => Err(e.into()),
                 };
                 return Poll::Ready(Some(ret));
