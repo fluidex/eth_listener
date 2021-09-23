@@ -17,8 +17,8 @@ use eth_listener::ConfirmedBlockStream;
 use eth_listener::CONFIG;
 use ethers::prelude::*;
 use rust_decimal::Decimal;
-use tonic::transport::Channel;
 use std::sync::atomic::{AtomicU64, Ordering};
+use tonic::transport::Channel;
 
 /// A helper to convert ethers Log to EthLogMetadata
 trait ToLogMeta {
