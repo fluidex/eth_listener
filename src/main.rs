@@ -4,7 +4,9 @@ extern crate log;
 use std::convert::TryFrom;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
+#[cfg(feature = "new_token")]
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::Result;
 use eth_listener::events::*;
@@ -12,6 +14,7 @@ use eth_listener::exchange::matchengine_client::MatchengineClient;
 use eth_listener::exchange::{BalanceUpdateRequest, EthLogMetadata, UserInfo};
 use eth_listener::infos::ContractInfos;
 use eth_listener::persist::Persistor;
+#[cfg(feature = "new_token")]
 use eth_listener::restapi::{NewAssetReq, RestClient};
 use eth_listener::ConfirmedBlockStream;
 use eth_listener::CONFIG;
@@ -56,7 +59,9 @@ async fn main() -> Result<()> {
     let mut grpc_client = MatchengineClient::new(grpc_channel);
     info!("grpc client ready");
 
+    #[cfg(feature = "new_token")]
     let rest_client = RestClient::new(CONFIG.exchange().rest_endpoint());
+    #[cfg(feature = "new_token")]
     info!("rest client ready");
 
     let mut contract_infos = ContractInfos::new(provider.clone(), contract_address);
@@ -127,6 +132,7 @@ async fn main() -> Result<()> {
                             .await?;
                     }
                 }
+                #[cfg(feature = "new_token")]
                 Events::NewToken(new_token) => {
                     let asset = contract_infos
                         .add_token(new_token.token_addr, new_token.token_id)
@@ -147,6 +153,9 @@ async fn main() -> Result<()> {
                             log_metadata: Some(register_user.origin.to_log_meta()),
                         })
                         .await?;
+                }
+                _ => {
+                    warn!("ignoring {:?}", event);
                 }
             }
         }
