@@ -22,7 +22,7 @@ env:
   CARGO_INCREMENTAL: false
 
 jobs:
-  lint:
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -32,6 +32,34 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
+
+      - name: Pull git submodule
+        run: git submodule update --init --recursive
+
+      - name: Install Node.js 14
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+          # cache: 'yarn'
+          # cache-dependency-path: contracts/yarn.lock
+
+      - name: Cache node_modules
+        id: npm_cache
+        uses: actions/cache@v2
+        with:
+          path: contracts/node_modules
+          key: node_modules-${{ hashFiles('contracts/yarn.lock') }}
+
+      - name: yarn install
+        if: steps.npm_cache.outputs.cache-hit != 'true'
+        run: |
+          cd contracts
+          yarn install
+
+      - name: Compile contracts
+        run: |
+          cd contracts
+          npx hardhat compile
 
       - name: Install 1.53.0 toolchain
         uses: actions-rs/toolchain@v1
@@ -76,14 +104,17 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
+      
+      - name: Mock build-config.toml
+        run: |
+          printf "out_name = \"events.rs\"\ncontract_file = \"contracts/artifacts/contracts/Fluidex.sol/FluidexDemo.json\"" > build-config.toml
 
-      ## skip clippy check because without build-config.toml we cannot compile
-      # - name: Run "cargo clippy"
-      #   uses: actions-rs/cargo@v1
-      #   # continue-on-error: true
-      #   with:
-      #     command: clippy
-      #     args: -- -D warnings
+      - name: Run "cargo clippy"
+        uses: actions-rs/cargo@v1
+        # continue-on-error: true
+        with:
+          command: clippy
+          args: -- -D warnings
 
       - name: show sccache stats
         run: ~/.cargo/bin/sccache -s
