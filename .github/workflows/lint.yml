@@ -107,7 +107,7 @@ jobs:
       
       - name: Mock build-config.toml
         run: |
-          printf "out_name = \"events.rs\"\ncontract_file = \"contracts/artifacts/contracts/Events.sol/Events.json\"" > build-config.toml
+          printf "out_name = \"events.rs\"\ncontract_file = \"contracts/artifacts/contracts/Fluidex.sol/FluidexDemo.json\"" > build-config.toml
 
       - name: Run "cargo clippy"
         uses: actions-rs/cargo@v1
