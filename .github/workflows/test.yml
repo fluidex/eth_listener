@@ -116,5 +116,12 @@ jobs:
           command: clippy
           args: -- -D warnings
 
+      - name: Run "cargo test"
+        uses: actions-rs/cargo@v1
+        # continue-on-error: true
+        with:
+          command: test
+          args: --all-features --
+
       - name: show sccache stats
         run: ~/.cargo/bin/sccache -s
