@@ -58,6 +58,7 @@ jobs:
 
       - name: Compile contracts
         run: |
+          cd contracts
           npx hardhat compile
 
       - name: Install 1.53.0 toolchain
