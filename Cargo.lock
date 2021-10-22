@@ -1474,7 +1474,7 @@ dependencies = [
 [[package]]
 name = "orchestra"
 version = "0.1.0"
-source = "git+https://github.com/fluidex/orchestra.git#e9972edfdff62b6d7959046e9f2810ec84d146b0"
+source = "git+https://github.com/fluidex/orchestra.git#ed3dfe48dde36de349fac28d8e714a4641b567f6"
 dependencies = [
  "prost",
  "serde",

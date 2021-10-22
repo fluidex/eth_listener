@@ -112,6 +112,7 @@ async fn main() -> Result<()> {
                                 delta: format!("{}", delta),
                                 detail: "".to_string(),
                                 log_metadata: Some(deposit.origin.to_log_meta()),
+                                signature: None,
                             })
                             .await?;
                     } else {
@@ -128,6 +129,7 @@ async fn main() -> Result<()> {
                                 delta: format!("{}", delta),
                                 detail: "".to_string(),
                                 log_metadata: Some(deposit.origin.to_log_meta()),
+                                signature: None,
                             })
                             .await?;
                     }
