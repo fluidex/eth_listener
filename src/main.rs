@@ -50,7 +50,6 @@ async fn main() -> Result<()> {
     info!("{:?}", *CONFIG);
 
     let contract_address: Address = CONFIG.web3().contract_address().parse().unwrap();
-
     let provider = Arc::new(Provider::connect(CONFIG.web3().web3_url()).await?);
     let grpc_channel = Channel::from_static(CONFIG.exchange().grpc_endpoint())
         .connect_timeout(Duration::from_secs(10))
@@ -86,7 +85,7 @@ async fn main() -> Result<()> {
         let log_filter = Filter::default()
             .from_block(block_number)
             .to_block(block_number)
-            .address(CONFIG.web3().contract_address().parse::<Address>().unwrap());
+            .address(ValueOrArray::Value(CONFIG.web3().contract_address().parse::<Address>()?));
         let events = provider
             .get_logs(&log_filter)
             .await?

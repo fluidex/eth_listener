@@ -15,9 +15,11 @@ pub mod persist;
 pub mod restapi;
 
 pub mod events {
+    #![allow(clippy::all)]
     include!(concat!(env!("OUT_DIR"), "/events.rs"));
 }
 
 pub mod fluidex {
+    #![allow(clippy::all)]
     include!(concat!(env!("OUT_DIR"), "/fluidex.rs"));
 }
