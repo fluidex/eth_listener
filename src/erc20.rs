@@ -1,6 +1,9 @@
+use std::convert::TryFrom;
 use ethers::abi::Abi;
 use ethers::prelude::*;
 use std::ops::Deref;
+use std::str::FromStr;
+use serde::Deserialize;
 
 use crate::restapi::Asset;
 
@@ -43,6 +46,12 @@ pub struct ERC20 {
     pub symbol: String,
     pub name: String,
     pub decimals: u8,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct LocalToken {
+    pub symbol: String,
+    pub address: String,
 }
 
 impl ERC20 {
