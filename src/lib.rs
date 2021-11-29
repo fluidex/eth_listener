@@ -1,6 +1,9 @@
 #[macro_use]
 extern crate log;
 
+#[cfg(all(feature = "new_token", feature = "local_token"))]
+compile_error!("feature `new_token` and `local_token` are conflict.");
+
 pub use orchestra::rpc::exchange;
 
 pub use crate::block_stream::ConfirmedBlockStream;
