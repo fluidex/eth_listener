@@ -63,7 +63,7 @@ async fn main() -> Result<()> {
     #[cfg(feature = "new_token")]
     info!("rest client ready");
 
-    let mut contract_infos = ContractInfos::new(provider.clone(), contract_address);
+    let mut contract_infos = ContractInfos::new(provider.clone(), contract_address).await;
 
     let persistor = Persistor::new(CONFIG.storage().db(), CONFIG.web3().base_block()).await?;
     info!("persistor ready");
