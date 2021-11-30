@@ -37,4 +37,4 @@ convert_case = "0.4.0"
 
 [features]
 new_token = []
-local_token = []
+offline = []

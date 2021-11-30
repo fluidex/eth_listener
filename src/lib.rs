@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate log;
 
-#[cfg(all(feature = "new_token", feature = "local_token"))]
+#[cfg(all(feature = "new_token", feature = "offline"))]
 compile_error!("feature `new_token` and `local_token` are conflict.");
 
 pub use orchestra::rpc::exchange;

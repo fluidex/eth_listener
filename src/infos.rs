@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::sync::Arc;
 
 use ethers::prelude::*;
@@ -22,8 +22,14 @@ pub struct ContractInfos<M: Middleware> {
 pub enum ContractInfoError {
     #[error("error when calling contract: {0}")]
     ContractError(String),
-    #[error("non existing erc20 token")]
-    NonExistentToken,
+    #[error("non existing entry")]
+    NonExistEntry,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct Account {
+    id: u16,
+    pubkey: String,
 }
 
 type Result<T, E = ContractInfoError> = std::result::Result<T, E>;
@@ -41,15 +47,15 @@ impl<M: Middleware> ContractInfos<M> {
             erc20s: HashMap::new(),
         };
 
-        if cfg!(feature = "local_token") {
+        if cfg!(feature = "offline") {
             info!("loading tokens from local file");
-            info.load_local_tokens().await.unwrap()
+            info.offline_load().await.unwrap()
         } else {
             info
         }
     }
 
-    async fn load_local_tokens(mut self) -> anyhow::Result<Self> {
+    async fn offline_load(mut self) -> anyhow::Result<Self> {
         let path = std::env::var("LOCAL_TOKEN").unwrap_or_else(|_| "/tmp/tokens.json".to_string());
         let tokens_file = tokio::fs::read(&path).await?;
         let tokens: Vec<LocalToken> = serde_json::from_slice(tokens_file.as_slice())?;
@@ -59,6 +65,13 @@ impl<M: Middleware> ContractInfos<M> {
             self.token_ids.insert(token_id, erc20.address);
             self.token_addresses.insert(erc20.address, token_id);
             self.erc20s.insert(erc20.address, erc20);
+        }
+        let path = std::env::var("LOCAL_ACCOUNTS").unwrap_or_else(|_| "/tmp/accounts.json".to_string());
+        let accounts_file = tokio::fs::read(&path).await?;
+        let accounts: Vec<Account> = serde_json::from_slice(accounts_file.as_slice())?;
+        for account in accounts {
+            let pubkey = hex::decode(&account.pubkey[2..])?.try_into().unwrap();
+            self.user_ids.insert(pubkey, account.id);
         }
         Ok(self)
     }
@@ -70,7 +83,7 @@ impl<M: Middleware> ContractInfos<M> {
         (erc20, token_id).into()
     }
 
-    #[cfg(not(feature = "local_token"))]
+    #[cfg(not(feature = "offline"))]
     pub async fn fetch_erc20(&mut self, address: Address) -> ERC20 {
         if let Some(erc20) = self.erc20s.get(&address) {
             return erc20.clone();
@@ -80,7 +93,7 @@ impl<M: Middleware> ContractInfos<M> {
         erc20
     }
 
-    #[cfg(feature = "local_token")]
+    #[cfg(feature = "offline")]
     pub async fn fetch_erc20(&mut self, address: Address) -> ERC20 {
         return self.erc20s.get(&address).unwrap().clone()
     }
@@ -90,7 +103,7 @@ impl<M: Middleware> ContractInfos<M> {
         return Ok((self.fetch_erc20(address).await, token_id).into());
     }
 
-    #[cfg(not(feature = "local_token"))]
+    #[cfg(not(feature = "offline"))]
     pub async fn fetch_token_address(&mut self, token_id: u16) -> Result<Address> {
         if let Some(address) = self.token_ids.get(&token_id) {
             return Ok(*address);
@@ -107,16 +120,16 @@ impl<M: Middleware> ContractInfos<M> {
         Ok(address)
     }
 
-    #[cfg(feature = "local_token")]
+    #[cfg(feature = "offline")]
     pub async fn fetch_token_address(&mut self, token_id: u16) -> Result<Address> {
         return if let Some(address) = self.token_ids.get(&token_id) {
             Ok(*address)
         } else {
-            Err(ContractInfoError::NonExistentToken)
+            Err(ContractInfoError::NonExistEntry)
         };
     }
 
-    #[cfg(not(feature = "local_token"))]
+    #[cfg(not(feature = "offline"))]
     pub async fn fetch_token_id(&mut self, address: Address) -> Result<u16> {
         if let Some(token_id) = self.token_addresses.get(&address) {
             return Ok(*token_id);
@@ -133,15 +146,16 @@ impl<M: Middleware> ContractInfos<M> {
         Ok(token_id)
     }
 
-    #[cfg(feature = "local_token")]
+    #[cfg(feature = "offline")]
     pub async fn fetch_token_id(&mut self, address: Address) -> Result<u16> {
         return if let Some(token_id) = self.token_addresses.get(&address) {
             Ok(*token_id)
         } else {
-            Err(ContractInfoError::NonExistentToken)
+            Err(ContractInfoError::NonExistEntry)
         };
     }
 
+    #[cfg(not(feature = "offline"))]
     pub async fn fetch_user_id(&mut self, pubkey: &[u8; 32]) -> Result<u16> {
         if let Some(user_id) = self.user_ids.get(pubkey) {
             return Ok(*user_id);
@@ -154,5 +168,14 @@ impl<M: Middleware> ContractInfos<M> {
             .map_err(|e| ContractInfoError::ContractError(format!("{:?}", e)))?;
         self.user_ids.insert(*pubkey, user_id);
         Ok(user_id)
+    }
+
+    #[cfg(feature = "offline")]
+    pub async fn fetch_user_id(&mut self, pubkey: &[u8; 32]) -> Result<u16> {
+        return if let Some(user_id) = self.user_ids.get(pubkey) {
+            Ok(*user_id)
+        } else {
+            Err(ContractInfoError::NonExistEntry)
+        }
     }
 }
