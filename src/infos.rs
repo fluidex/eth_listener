@@ -125,6 +125,7 @@ impl<M: Middleware> ContractInfos<M> {
         return if let Some(address) = self.token_ids.get(&token_id) {
             Ok(*address)
         } else {
+            error!("trying fetch non exist token #{}", token_id);
             Err(ContractInfoError::NonExistEntry)
         };
     }
@@ -151,6 +152,7 @@ impl<M: Middleware> ContractInfos<M> {
         return if let Some(token_id) = self.token_addresses.get(&address) {
             Ok(*token_id)
         } else {
+            error!("trying fetch non exist token {}", address);
             Err(ContractInfoError::NonExistEntry)
         };
     }
@@ -175,6 +177,7 @@ impl<M: Middleware> ContractInfos<M> {
         return if let Some(user_id) = self.user_ids.get(pubkey) {
             Ok(*user_id)
         } else {
+            error!("trying fetch non exist user {}", hex::encode(pubkey));
             Err(ContractInfoError::NonExistEntry)
         }
     }
