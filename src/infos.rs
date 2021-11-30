@@ -48,7 +48,6 @@ impl<M: Middleware> ContractInfos<M> {
         }
     }
 
-    #[cfg(feature = "local_token")]
     async fn load_local_tokens(mut self) -> anyhow::Result<Self> {
         let path = std::env::var("LOCAL_TOKEN").unwrap_or_else(|_| "/tmp/tokens.json".to_string());
         let tokens_file = tokio::fs::read(&path).await?;
