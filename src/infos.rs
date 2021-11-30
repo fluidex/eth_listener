@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use ethers::prelude::*;
 
-use crate::erc20::{ERC20, LocalToken};
+use crate::erc20::{LocalToken, ERC20};
 use crate::restapi::Asset;
 use crate::Fluidex;
 
@@ -106,7 +106,7 @@ impl<M: Middleware> ContractInfos<M> {
             Ok(*address)
         } else {
             Err(ContractInfoError::NonExistentToken)
-        }
+        };
     }
 
     #[cfg(not(feature = "local_token"))]
@@ -132,7 +132,7 @@ impl<M: Middleware> ContractInfos<M> {
             Ok(*token_id)
         } else {
             Err(ContractInfoError::NonExistentToken)
-        }
+        };
     }
 
     pub async fn fetch_user_id(&mut self, pubkey: &[u8; 32]) -> Result<u16> {

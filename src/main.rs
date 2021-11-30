@@ -50,7 +50,9 @@ async fn main() -> Result<()> {
     info!("{:?}", *CONFIG);
 
     let contract_address: Address = CONFIG.web3().contract_address().parse().unwrap();
-    let (ws, _) = tokio_tungstenite::connect_async(CONFIG.web3().web3_url()).await.unwrap();
+    let (ws, _) = tokio_tungstenite::connect_async(CONFIG.web3().web3_url())
+        .await
+        .unwrap();
     let ws = Ws::new(ws);
     let provider = Arc::new(Provider::new(ws));
     let grpc_channel = Channel::from_static(CONFIG.exchange().grpc_endpoint())
@@ -87,7 +89,9 @@ async fn main() -> Result<()> {
         let log_filter = Filter::default()
             .from_block(block_number)
             .to_block(block_number)
-            .address(ValueOrArray::Value(CONFIG.web3().contract_address().parse::<Address>()?));
+            .address(ValueOrArray::Value(
+                CONFIG.web3().contract_address().parse::<Address>()?,
+            ));
         let events = provider
             .get_logs(&log_filter)
             .await?

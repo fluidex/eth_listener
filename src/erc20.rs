@@ -1,9 +1,9 @@
-use std::convert::TryFrom;
 use ethers::abi::Abi;
 use ethers::prelude::*;
+use serde::Deserialize;
+use std::convert::TryFrom;
 use std::ops::Deref;
 use std::str::FromStr;
-use serde::Deserialize;
 
 use crate::restapi::Asset;
 
@@ -115,16 +115,16 @@ impl TryFrom<LocalToken> for ERC20 {
             address,
             symbol: token.symbol.clone(),
             name: token.symbol,
-            decimals: 6
+            decimals: 6,
         })
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::convert::TryFrom;
     use tokio_tungstenite::connect_async;
-    use super::*;
 
     const INFURA: &'static str = "https://goerli.infura.io/v3/71e500f0f56944fa80641312fdd9a6a4";
     const INFURA_WS: &'static str = "wss://goerli.infura.io/ws/v3/71e500f0f56944fa80641312fdd9a6a4";
