@@ -42,6 +42,7 @@ impl<M: Middleware> ContractInfos<M> {
         };
 
         if cfg!(feature = "local_token") {
+            info!("loading tokens from local file");
             info.load_local_tokens().await.unwrap()
         } else {
             info
@@ -69,6 +70,7 @@ impl<M: Middleware> ContractInfos<M> {
         (erc20, token_id).into()
     }
 
+    #[cfg(not(feature = "local_token"))]
     pub async fn fetch_erc20(&mut self, address: Address) -> ERC20 {
         if let Some(erc20) = self.erc20s.get(&address) {
             return erc20.clone();
@@ -76,6 +78,11 @@ impl<M: Middleware> ContractInfos<M> {
         let erc20 = ERC20::query(&self.provider, address).await;
         self.erc20s.insert(address, erc20.clone());
         erc20
+    }
+
+    #[cfg(feature = "local_token")]
+    pub async fn fetch_erc20(&mut self, address: Address) -> ERC20 {
+        return self.erc20s.get(&address).unwrap().clone()
     }
 
     pub async fn fetch_assets(&mut self, token_id: u16) -> Result<Asset> {
