@@ -50,7 +50,9 @@ async fn main() -> Result<()> {
     info!("{:?}", *CONFIG);
 
     let contract_address: Address = CONFIG.web3().contract_address().parse().unwrap();
-    let provider = Arc::new(Provider::connect(CONFIG.web3().web3_url()).await?);
+    let (ws, _) = tokio_tungstenite::connect_async(CONFIG.web3().web3_url()).await.unwrap();
+    let ws = Ws::new(ws);
+    let provider = Arc::new(Provider::new(ws));
     let grpc_channel = Channel::from_static(CONFIG.exchange().grpc_endpoint())
         .connect_timeout(Duration::from_secs(10))
         .connect()
