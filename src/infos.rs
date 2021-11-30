@@ -70,7 +70,7 @@ impl<M: Middleware> ContractInfos<M> {
         let accounts_file = tokio::fs::read(&path).await?;
         let accounts: Vec<Account> = serde_json::from_slice(accounts_file.as_slice())?;
         for account in accounts {
-            let pubkey = hex::decode(&account.pubkey[2..])?.try_into().unwrap();
+            let pubkey = hex::decode(account.pubkey.trim_start_matches("0x"))?.try_into().unwrap();
             self.user_ids.insert(pubkey, account.id);
         }
         Ok(self)
@@ -177,7 +177,7 @@ impl<M: Middleware> ContractInfos<M> {
         return if let Some(user_id) = self.user_ids.get(pubkey) {
             Ok(*user_id)
         } else {
-            error!("trying fetch non exist user {}", hex::encode(pubkey));
+            error!("trying fetch non exist user {}, current have: {:?}", hex::encode(pubkey), self.user_ids.keys().map(hex::encode).collect::<Vec<String>>());
             Err(ContractInfoError::NonExistEntry)
         }
     }
