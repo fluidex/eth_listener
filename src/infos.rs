@@ -66,11 +66,14 @@ impl<M: Middleware> ContractInfos<M> {
             self.token_addresses.insert(erc20.address, token_id);
             self.erc20s.insert(erc20.address, erc20);
         }
-        let path = std::env::var("LOCAL_ACCOUNTS").unwrap_or_else(|_| "/tmp/accounts.json".to_string());
+        let path =
+            std::env::var("LOCAL_ACCOUNTS").unwrap_or_else(|_| "/tmp/accounts.json".to_string());
         let accounts_file = tokio::fs::read(&path).await?;
         let accounts: Vec<Account> = serde_json::from_slice(accounts_file.as_slice())?;
         for account in accounts {
-            let pubkey = hex::decode(account.pubkey.trim_start_matches("0x"))?.try_into().unwrap();
+            let pubkey = hex::decode(account.pubkey.trim_start_matches("0x"))?
+                .try_into()
+                .unwrap();
             self.user_ids.insert(pubkey, account.id);
         }
         Ok(self)
@@ -95,7 +98,7 @@ impl<M: Middleware> ContractInfos<M> {
 
     #[cfg(feature = "offline")]
     pub async fn fetch_erc20(&mut self, address: Address) -> ERC20 {
-        return self.erc20s.get(&address).unwrap().clone()
+        return self.erc20s.get(&address).unwrap().clone();
     }
 
     pub async fn fetch_assets(&mut self, token_id: u16) -> Result<Asset> {
@@ -177,8 +180,15 @@ impl<M: Middleware> ContractInfos<M> {
         return if let Some(user_id) = self.user_ids.get(pubkey) {
             Ok(*user_id)
         } else {
-            error!("trying fetch non exist user {}, current have: {:?}", hex::encode(pubkey), self.user_ids.keys().map(hex::encode).collect::<Vec<String>>());
+            error!(
+                "trying fetch non exist user {}, current have: {:?}",
+                hex::encode(pubkey),
+                self.user_ids
+                    .keys()
+                    .map(hex::encode)
+                    .collect::<Vec<String>>()
+            );
             Err(ContractInfoError::NonExistEntry)
-        }
+        };
     }
 }

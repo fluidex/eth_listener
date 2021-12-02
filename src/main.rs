@@ -50,11 +50,10 @@ async fn main() -> Result<()> {
     info!("{:?}", *CONFIG);
 
     let contract_address: Address = CONFIG.web3().contract_address().parse().unwrap();
-    let (ws, _) = tokio_tungstenite::connect_async(CONFIG.web3().web3_url())
-        .await
-        .unwrap();
+    let (ws, _) = tokio_tungstenite::connect_async(CONFIG.web3().web3_ws()).await?;
     let ws = Ws::new(ws);
-    let provider = Arc::new(Provider::new(ws));
+    let ws_provider = Arc::new(Provider::new(ws));
+    let http_provider = Arc::new(Provider::try_from(CONFIG.web3().web3_http())?);
     let grpc_channel = Channel::from_static(CONFIG.exchange().grpc_endpoint())
         .connect_timeout(Duration::from_secs(10))
         .connect()
@@ -67,7 +66,7 @@ async fn main() -> Result<()> {
     #[cfg(feature = "new_token")]
     info!("rest client ready");
 
-    let mut contract_infos = ContractInfos::new(provider.clone(), contract_address).await;
+    let mut contract_infos = ContractInfos::new(http_provider.clone(), contract_address).await;
 
     let persistor = Persistor::new(CONFIG.storage().db(), CONFIG.web3().base_block()).await?;
     info!("persistor ready");
@@ -75,14 +74,14 @@ async fn main() -> Result<()> {
     info!("start listening on eth net");
 
     let mut confirmed_stream =
-        ConfirmedBlockStream::new(&provider, persistor.get_block_number().await?, 3).await?;
+        ConfirmedBlockStream::new(&ws_provider, persistor.get_block_number().await?, 3).await?;
 
     while let Some(block) = confirmed_stream.next().await {
         let block = block?;
         let block_number = block.number.unwrap();
         info!(
             "current: {}, confirmed: {} {:?}",
-            provider.get_block_number().await?.as_u64(),
+            http_provider.get_block_number().await?.as_u64(),
             block_number,
             block.hash.unwrap()
         );
@@ -92,7 +91,7 @@ async fn main() -> Result<()> {
             .address(ValueOrArray::Value(
                 CONFIG.web3().contract_address().parse::<Address>()?,
             ));
-        let events = provider
+        let events = http_provider
             .get_logs(&log_filter)
             .await?
             .into_iter()
