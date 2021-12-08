@@ -2,3 +2,5 @@
 /src/events.rs
 /build-config.toml
 /config.toml
+
+*sftp-config.json
