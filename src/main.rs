@@ -43,9 +43,12 @@ fn get_business_id() -> u64 {
     BUSINESS_ID_SERIAL.fetch_add(1, Ordering::SeqCst)
 }
 
+
+use fluidex_common::non_blocking_tracing;
+
 #[tokio::main]
 async fn main() -> Result<()> {
-    pretty_env_logger::init();
+    let _guard = non_blocking_tracing::setup();
 
     info!("{:?}", *CONFIG);
 

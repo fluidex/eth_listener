@@ -25,6 +25,7 @@ tokio-postgres = "0.7"
 tokio-tungstenite = { version = "0.15", features = ["rustls-tls"] }
 toml = "0.5.8"
 tonic = "0.5.2"
+fluidex-common = { git = "https://github.com/fluidex/common-rs", branch = "master", features = [ "non-blocking-tracing" ] }
 
 [build-dependencies]
 anyhow = "1.0"
