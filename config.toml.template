@@ -1,6 +1,7 @@
 [web3]
 web3_url = "${WEB3_URL}"
 contract_address = "${CONTRACT_ADDRESS}"
+inner_contract_address = "${INNER_CONTRACT_ADDRESS}"
 base_block = 123456
 
 [exchange]

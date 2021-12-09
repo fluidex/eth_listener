@@ -43,7 +43,6 @@ fn get_business_id() -> u64 {
     BUSINESS_ID_SERIAL.fetch_add(1, Ordering::SeqCst)
 }
 
-
 use fluidex_common::non_blocking_tracing;
 
 #[tokio::main]
@@ -52,7 +51,7 @@ async fn main() -> Result<()> {
 
     info!("{:?}", *CONFIG);
 
-    let contract_address: Address = CONFIG.web3().contract_address().parse().unwrap();
+    let inner_contract_address: Address = CONFIG.web3().inner_contract_address().parse().unwrap();
     let (ws, _) = tokio_tungstenite::connect_async(CONFIG.web3().web3_ws()).await?;
     let ws = Ws::new(ws);
     let ws_provider = Arc::new(Provider::new(ws));
@@ -69,7 +68,8 @@ async fn main() -> Result<()> {
     #[cfg(feature = "new_token")]
     info!("rest client ready");
 
-    let mut contract_infos = ContractInfos::new(http_provider.clone(), contract_address).await;
+    let mut contract_infos =
+        ContractInfos::new(http_provider.clone(), inner_contract_address).await;
 
     let persistor = Persistor::new(CONFIG.storage().db(), CONFIG.web3().base_block()).await?;
     info!("persistor ready");

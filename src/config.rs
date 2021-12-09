@@ -20,6 +20,7 @@ pub struct Web3 {
     network: String,
     infura_api_key: Option<String>,
     contract_address: String,
+    inner_contract_address: String,
     base_block: u64,
 }
 
@@ -64,6 +65,7 @@ impl Default for Web3 {
             network: "goerli".to_string(),
             infura_api_key: None,
             contract_address: "".to_string(),
+            inner_contract_address: "".to_string(),
             base_block: 0,
         }
     }
@@ -92,6 +94,9 @@ impl Web3 {
     }
     pub fn contract_address(&'static self) -> &'static str {
         &self.contract_address
+    }
+    pub fn inner_contract_address(&'static self) -> &'static str {
+        &self.inner_contract_address
     }
     pub fn base_block(&self) -> u64 {
         self.base_block
