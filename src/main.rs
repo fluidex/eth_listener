@@ -98,8 +98,10 @@ async fn main() -> Result<()> {
             .get_logs(&log_filter)
             .await?
             .into_iter()
-            .map(Events::try_from)
-            .collect::<Result<Vec<Events>, EventParseError>>()?;
+            .map(|log| Events::try_from(log).ok())
+            .filter(Option::is_some)
+            .map(Option::unwrap)
+            .collect::<Vec<Events>>();
         for event in events {
             info!("process event: {:?}", event);
             match event {
