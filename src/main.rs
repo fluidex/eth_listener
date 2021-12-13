@@ -120,6 +120,7 @@ async fn main() -> Result<()> {
                                 business_id: get_business_id(),
                                 delta: format!("{}", delta),
                                 detail: "".to_string(),
+                                signature: Some("".to_string()),
                                 log_metadata: Some(deposit.origin.to_log_meta()),
                             })
                             .await?;
@@ -136,6 +137,7 @@ async fn main() -> Result<()> {
                                 business_id: get_business_id(),
                                 delta: format!("{}", delta),
                                 detail: "".to_string(),
+                                signature: Some("".to_string()),
                                 log_metadata: Some(deposit.origin.to_log_meta()),
                             })
                             .await?;
