@@ -132,7 +132,7 @@ async fn main() -> Result<()> {
                         grpc_client
                             .balance_update(BalanceUpdateRequest {
                                 user_id: user_id as u32,
-                                asset: erc20.name,
+                                asset: erc20.symbol,
                                 business: "deposit".to_string(),
                                 business_id: get_business_id(),
                                 delta: format!("{}", delta),
