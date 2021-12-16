@@ -1,2 +1,3 @@
 out_name = "events.rs"
 contract_file = "${CONTRACT_FILE}"
+delegate_contract_file = "${DELEGATE_CONTRACT_FILE}"
