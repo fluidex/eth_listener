@@ -6,8 +6,8 @@ inner_contract_address = "${INNER_CONTRACT_ADDRESS}"
 base_block = ${BASE_BLOCK}
 
 [exchange]
-grpc_endpoint = "${EXCHANGE_GRPC}"
-rest_endpoint = "${EXCHANGE_REST}"
+grpc_endpoint = "http://0.0.0.0:50051"
+rest_endpoint = "http://0.0.0.0:50051"
 
 [storage]
 db = "postgresql://listener:listener_AA9944@0.0.0.0:5437/eth_listener"
