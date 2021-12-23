@@ -14,6 +14,7 @@ use tera::{Context, Tera};
 struct BuildConfig {
     out_name: String,
     contract_file: String,
+    delegate_contract_file: String,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -25,19 +26,13 @@ fn main() -> anyhow::Result<()> {
     let out_dir = env::var("OUT_DIR").unwrap();
     let dest_path = Path::new(&out_dir).join(&config.out_name);
 
-    let contract_file = fs::read_to_string(&config.contract_file)?;
-    let parsed_contract: Value = serde_json::from_str(contract_file.as_str())?;
-    let abi_string = serde_json::to_vec(
-        parsed_contract
-            .get("abi")
-            .expect("missing abi in contract file"),
-    )?;
-    let abi = parsed_contract.get("abi").unwrap();
-    let bindings = Abigen::new("Fluidex", serde_json::to_string(abi).unwrap())?.generate()?;
+    let (_, contract_abi) = get_abi(&config.contract_file)?;
+    let (delegate_abi_string, _) = get_abi(&config.delegate_contract_file)?;
+    let bindings = Abigen::new("Fluidex", serde_json::to_string(&contract_abi).unwrap())?.generate()?;
     bindings
         .write_to_file(Path::new(&out_dir).join("fluidex.rs"))
         .unwrap();
-    let contract = Contract::load(abi_string.as_slice())?;
+    let contract = Contract::load(delegate_abi_string.as_slice())?;
 
     let events: Vec<Event> = contract
         .events()
@@ -73,6 +68,18 @@ fn main() -> anyhow::Result<()> {
     out_file.flush()?;
 
     Ok(())
+}
+
+fn get_abi(path: &String) -> anyhow::Result<(Vec<u8>, Value)> {
+    let contract_file = fs::read_to_string(path)?;
+    let parsed_contract: Value = serde_json::from_str(contract_file.as_str())?;
+    let abi_string = serde_json::to_vec(
+        parsed_contract
+            .get("abi")
+            .expect("missing abi in contract file"),
+    )?;
+    let abi = parsed_contract.get("abi").unwrap().to_owned();
+    Ok((abi_string, abi))
 }
 
 fn upper_snake(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {

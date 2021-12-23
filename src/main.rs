@@ -43,15 +43,19 @@ fn get_business_id() -> u64 {
     BUSINESS_ID_SERIAL.fetch_add(1, Ordering::SeqCst)
 }
 
+use fluidex_common::non_blocking_tracing;
+
 #[tokio::main]
 async fn main() -> Result<()> {
-    pretty_env_logger::init();
+    let _guard = non_blocking_tracing::setup();
 
     info!("{:?}", *CONFIG);
 
-    let contract_address: Address = CONFIG.web3().contract_address().parse().unwrap();
-
-    let provider = Arc::new(Provider::connect(CONFIG.web3().web3_url()).await?);
+    let inner_contract_address: Address = CONFIG.web3().inner_contract_address().parse().unwrap();
+    let (ws, _) = tokio_tungstenite::connect_async(CONFIG.web3().web3_ws()).await?;
+    let ws = Ws::new(ws);
+    let ws_provider = Arc::new(Provider::new(ws));
+    let http_provider = Arc::new(Provider::try_from(CONFIG.web3().web3_http())?);
     let grpc_channel = Channel::from_static(CONFIG.exchange().grpc_endpoint())
         .connect_timeout(Duration::from_secs(10))
         .connect()
@@ -64,7 +68,8 @@ async fn main() -> Result<()> {
     #[cfg(feature = "new_token")]
     info!("rest client ready");
 
-    let mut contract_infos = ContractInfos::new(provider.clone(), contract_address);
+    let mut contract_infos =
+        ContractInfos::new(http_provider.clone(), inner_contract_address).await;
 
     let persistor = Persistor::new(CONFIG.storage().db(), CONFIG.web3().base_block()).await?;
     info!("persistor ready");
@@ -72,27 +77,31 @@ async fn main() -> Result<()> {
     info!("start listening on eth net");
 
     let mut confirmed_stream =
-        ConfirmedBlockStream::new(&provider, persistor.get_block_number().await?, 3).await?;
+        ConfirmedBlockStream::new(&ws_provider, persistor.get_block_number().await?, 3).await?;
 
     while let Some(block) = confirmed_stream.next().await {
         let block = block?;
         let block_number = block.number.unwrap();
         info!(
             "current: {}, confirmed: {} {:?}",
-            provider.get_block_number().await?.as_u64(),
+            http_provider.get_block_number().await?.as_u64(),
             block_number,
             block.hash.unwrap()
         );
         let log_filter = Filter::default()
             .from_block(block_number)
             .to_block(block_number)
-            .address(CONFIG.web3().contract_address().parse::<Address>().unwrap());
-        let events = provider
+            .address(ValueOrArray::Value(
+                CONFIG.web3().contract_address().parse::<Address>()?,
+            ));
+        let events = http_provider
             .get_logs(&log_filter)
             .await?
             .into_iter()
-            .map(Events::try_from)
-            .collect::<Result<Vec<Events>, EventParseError>>()?;
+            .map(|log| Events::try_from(log).ok())
+            .filter(Option::is_some)
+            .map(Option::unwrap)
+            .collect::<Vec<Events>>();
         for event in events {
             info!("process event: {:?}", event);
             match event {
@@ -111,6 +120,7 @@ async fn main() -> Result<()> {
                                 business_id: get_business_id(),
                                 delta: format!("{}", delta),
                                 detail: "".to_string(),
+                                signature: Some("".to_string()),
                                 log_metadata: Some(deposit.origin.to_log_meta()),
                             })
                             .await?;
@@ -122,11 +132,12 @@ async fn main() -> Result<()> {
                         grpc_client
                             .balance_update(BalanceUpdateRequest {
                                 user_id: user_id as u32,
-                                asset: erc20.name,
+                                asset: erc20.symbol,
                                 business: "deposit".to_string(),
                                 business_id: get_business_id(),
                                 delta: format!("{}", delta),
                                 detail: "".to_string(),
+                                signature: Some("".to_string()),
                                 log_metadata: Some(deposit.origin.to_log_meta()),
                             })
                             .await?;
